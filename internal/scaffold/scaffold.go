@@ -28,9 +28,9 @@ limiter:
   backoff_initial: 1m            # first backoff interval
   backoff_max: 5h                # cap on backoff
 
-# ui:
-#   path: ".pave/ui"             # directory where the UI assets are stored
-#   port: 4000                   # port for the local UI server
+ui:
+  path: ".pave/ui"             # directory where the UI assets are stored
+  port: 4000                   # port for the local UI server
 `
 
 // DefaultFeaturesMD is the starter FEATURES.md content.
