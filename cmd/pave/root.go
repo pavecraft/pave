@@ -16,8 +16,9 @@ var (
 // newRootCmd builds the root command and wires all subcommands.
 func newRootCmd() *cobra.Command {
 	root := &cobra.Command{
-		Use:   "pave",
-		Short: "Autonomous local-first orchestrator for AI coding CLIs",
+		Use:     "pave",
+		Version: version,
+		Short:   "Autonomous local-first orchestrator for AI coding CLIs",
 		Long: "pave reads a project's feature spec, tracks implementation state, and\n" +
 			"drives an AI coding CLI (claude -p / copilot -p) to implement pending\n" +
 			"features, pausing and resuming around provider rate limits.",
