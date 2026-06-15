@@ -92,11 +92,11 @@ func (l *Limiter) Observe(res provider.Result, _ error) {
 	// If the provider told us exactly when the limit resets, use that directly
 	// instead of computing an exponential backoff guess.
 	if explicit := provider.ParseResetTime(res.Output + "\n" + res.Stderr); !explicit.IsZero() {
-		l.resetAt = explicit
+		l.resetAt = explicit.Add(l.cfg.ResetBuffer)
 		l.reason = reason
-		wait := time.Until(explicit).Round(time.Second)
+		wait := time.Until(l.resetAt).Round(time.Second)
 		l.log.Warn("rate limit detected; using explicit reset time", "provider", l.provider,
-			"reason", reason, "reset_at", explicit.Format(time.RFC3339), "wait", wait.String())
+			"reason", reason, "reset_at", l.resetAt.Format(time.RFC3339), "wait", wait.String())
 	} else {
 		d := l.backoffWithJitter(l.strikes)
 		l.resetAt = l.now().Add(d)
