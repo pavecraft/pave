@@ -12,12 +12,6 @@ modifying `pave`.
 - **Test:** `go test ./... -race -count=1`
 - **Lint:** `go vet ./...` and `gofmt -l .` must report nothing.
 
-## Git rules
-
-- **Never push directly to `main`.** All changes must go through a feature branch and PR.
-- Branch naming: `feat/<topic>`, `fix/<topic>`, or `chore/<topic>`.
-- Do not commit or push until the user explicitly asks you to.
-
 ## Hard rules
 
 1. **No CGO.** The binary must be statically linkable. Use `modernc.org/sqlite`,
