@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -30,11 +31,11 @@ func newVersionCmd() *cobra.Command {
 				uiVersion = version
 			}
 
-			installed := installedUIVersion(cfg.UI.Path)
-			if installed == "" {
-				fmt.Fprintf(out, "pave UI:  not installed (expected %s)\n", uiVersion)
+			info, err := os.Stat(cfg.UI.Path)
+			if err != nil || !info.IsDir() {
+				fmt.Fprintf(out, "pave UI:  %s (Not installed)\n", uiVersion)
 			} else {
-				fmt.Fprintf(out, "pave UI:  %s\n", installed)
+				fmt.Fprintf(out, "pave UI:  %s\n", uiVersion)
 			}
 			return nil
 		},
