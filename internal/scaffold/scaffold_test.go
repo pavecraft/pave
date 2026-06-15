@@ -1,6 +1,7 @@
 package scaffold
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -10,7 +11,7 @@ func TestInitCreatesFiles(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 
-	res, err := Init(dir)
+	res, err := Init(dir, "1.0.0")
 	if err != nil {
 		t.Fatalf("Init() error = %v", err)
 	}
@@ -23,8 +24,8 @@ func TestInitCreatesFiles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading config: %v", err)
 	}
-	if string(cfg) != DefaultConfigYAML {
-		t.Error("config content does not match default")
+	if want := fmt.Sprintf(configYAMLTemplate, "1.0.0"); string(cfg) != want {
+		t.Errorf("config content does not match expected:\ngot:  %s\nwant: %s", cfg, want)
 	}
 	// FEATURES.md stays in the project root
 	if _, err := os.Stat(filepath.Join(dir, "FEATURES.md")); err != nil {
@@ -47,7 +48,7 @@ func TestInitIdempotent(t *testing.T) {
 		t.Fatalf("seeding config: %v", err)
 	}
 
-	res, err := Init(dir)
+	res, err := Init(dir, "1.0.0")
 	if err != nil {
 		t.Fatalf("Init() error = %v", err)
 	}
@@ -71,10 +72,10 @@ func TestInitSecondRunCreatesNothing(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 
-	if _, err := Init(dir); err != nil {
+	if _, err := Init(dir, "1.0.0"); err != nil {
 		t.Fatalf("first Init() error = %v", err)
 	}
-	res, err := Init(dir)
+	res, err := Init(dir, "1.0.0")
 	if err != nil {
 		t.Fatalf("second Init() error = %v", err)
 	}

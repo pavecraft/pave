@@ -35,8 +35,9 @@ type Limiter struct {
 
 // UI configures the local Next.js viewer launched by `pave ui`.
 type UI struct {
-	Path string `yaml:"path"`
-	Port int    `yaml:"port"`
+	Path    string `yaml:"path"`
+	Port    int    `yaml:"port"`
+	Version string `yaml:"version"` // UI release to download; empty = same as pave binary
 }
 
 // Config is the parsed and validated contents of pave.yaml.
