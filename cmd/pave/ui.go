@@ -21,7 +21,8 @@ import (
 	"github.com/xoai/pave/internal/proc"
 )
 
-const uiReleaseURL = "https://github.com/pavecraft/pave/releases/download/%s/pave-ui_%s.tar.gz"
+// uiReleaseURL: first %s is the tag (v-prefixed), second %s is the version (no v prefix).
+const uiReleaseURL = "https://github.com/pavecraft/pave/releases/download/v%s/pave-ui_%s.tar.gz"
 
 func newUICmd() *cobra.Command {
 	var (
