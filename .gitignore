@@ -1,0 +1,13 @@
+# Built binary
+/pave
+
+# Local state
+.pave/
+
+# Node / Next.js (ui/)
+node_modules/
+.next/
+out/
+
+# OS / editor
+.DS_Store
