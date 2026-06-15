@@ -97,10 +97,14 @@ type Store interface {
 	CreateAttempt(ctx context.Context, a Attempt) error
 	FinishAttempt(ctx context.Context, a Attempt) error
 	ListAttempts(ctx context.Context, runID string) ([]Attempt, error)
+	GetAttempt(ctx context.Context, id string) (Attempt, error)
 
 	// Log lines.
 	AppendLogLine(ctx context.Context, l LogLine) error
 	ListLogLines(ctx context.Context, runID string, afterID int64) ([]LogLine, error)
+
+	// Aggregates (read-only, used by the UI API).
+	FeatureHistory(ctx context.Context) ([]FeatureHistoryRow, error)
 
 	// Limiter windows.
 	SetLimiterWindow(ctx context.Context, w LimiterWindow) error
@@ -108,6 +112,13 @@ type Store interface {
 
 	// Close releases the underlying database resources.
 	Close() error
+}
+
+// FeatureHistoryRow holds the aggregate attempt stats for one feature across all runs.
+type FeatureHistoryRow struct {
+	FeatureID string
+	Attempts  int64
+	Successes int64
 }
 
 // ErrNotFound is returned by Get* methods when no row matches.

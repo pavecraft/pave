@@ -20,7 +20,7 @@ func newInitCmd() *cobra.Command {
 			"Add .pave/ to your .gitignore to keep state and config out of version control;\n" +
 			"FEATURES.md is placed in the project root so it stays visible to your team.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			res, err := scaffold.Init(dir, version)
+			res, err := scaffold.Init(dir)
 			if err != nil {
 				return err
 			}

@@ -186,6 +186,37 @@ func (s *sqlStore) ListAttempts(ctx context.Context, runID string) ([]Attempt, e
 	return out, rows.Err()
 }
 
+func (s *sqlStore) GetAttempt(ctx context.Context, id string) (Attempt, error) {
+	const q = `SELECT id, run_id, feature_id, provider, prompt, output, stderr,
+			exit_code, success, session_id, started_at, ended_at, duration_ms
+		FROM attempts WHERE id = ?`
+	row := s.db.QueryRowContext(ctx, s.d.rebind(q), id)
+	a, err := scanAttempt(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Attempt{}, ErrNotFound{What: "attempt " + id}
+	}
+	return a, err
+}
+
+func (s *sqlStore) FeatureHistory(ctx context.Context) ([]FeatureHistoryRow, error) {
+	const q = `SELECT feature_id, COUNT(*) AS attempts, SUM(success) AS successes
+		FROM attempts GROUP BY feature_id ORDER BY attempts DESC`
+	rows, err := s.db.QueryContext(ctx, s.d.rebind(q))
+	if err != nil {
+		return nil, fmt.Errorf("feature history: %w", err)
+	}
+	defer rows.Close()
+	var out []FeatureHistoryRow
+	for rows.Next() {
+		var r FeatureHistoryRow
+		if err := rows.Scan(&r.FeatureID, &r.Attempts, &r.Successes); err != nil {
+			return nil, fmt.Errorf("scanning feature history: %w", err)
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
 // --- Log lines ---
 
 func (s *sqlStore) AppendLogLine(ctx context.Context, l LogLine) error {

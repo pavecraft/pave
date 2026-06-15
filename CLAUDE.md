@@ -7,7 +7,8 @@ modifying `pave`.
 
 - **Module:** `github.com/pavecraft/pave`
 - **Language:** Go 1.22+
-- **Build:** `CGO_ENABLED=0 go build ./cmd/pave`
+- **Build:** `cd ui && npm ci && npm run build && cd .. && CGO_ENABLED=0 go build ./cmd/pave`
+  (The React/Vite UI must be built first so `//go:embed all:dist` has files to embed.)
 - **Test:** `go test ./... -race -count=1`
 - **Lint:** `go vet ./...` and `gofmt -l .` must report nothing.
 

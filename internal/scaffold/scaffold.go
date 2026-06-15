@@ -7,9 +7,8 @@ import (
 	"path/filepath"
 )
 
-// configYAMLTemplate is the starter pave.yaml template; %s is replaced with the
-// pave binary version so ui.version is pinned at init time.
-const configYAMLTemplate = `# pave configuration. See README.md for the full reference.
+// DefaultConfigYAML is the starter pave.yaml content written to .pave/pave.yaml.
+const DefaultConfigYAML = `# pave configuration. See README.md for the full reference.
 
 project_path: .                  # target project root
 features_file: ./FEATURES.md    # feature spec (kept in project root for visibility)
@@ -28,11 +27,6 @@ limiter:
   window: 5h                     # rolling usage window length
   backoff_initial: 1m            # first backoff interval
   backoff_max: 5h                # cap on backoff
-
-ui:
-  path: ".pave/ui"             # directory where the UI assets are stored
-  port: 4000                   # port for the local UI server
-  version: "%s"                # UI release to download; must match pave binary version
 `
 
 // DefaultFeaturesMD is the starter FEATURES.md content.
@@ -58,10 +52,9 @@ type Result struct {
 	FeaturesCreated bool
 }
 
-// Init scaffolds .pave/pave.yaml and FEATURES.md under dir. paveVersion is
-// stamped into ui.version so the UI download is pinned to the same release.
+// Init scaffolds .pave/pave.yaml and FEATURES.md under dir.
 // Neither file is overwritten if it already exists.
-func Init(dir, paveVersion string) (Result, error) {
+func Init(dir string) (Result, error) {
 	paveDir := filepath.Join(dir, ".pave")
 	if err := os.MkdirAll(paveDir, 0o755); err != nil {
 		return Result{}, fmt.Errorf("creating .pave directory: %w", err)
@@ -73,7 +66,7 @@ func Init(dir, paveVersion string) (Result, error) {
 		FeaturesPath: filepath.Join(dir, "FEATURES.md"),
 	}
 
-	created, err := writeIfAbsent(res.ConfigPath, fmt.Sprintf(configYAMLTemplate, paveVersion))
+	created, err := writeIfAbsent(res.ConfigPath, DefaultConfigYAML)
 	if err != nil {
 		return res, err
 	}

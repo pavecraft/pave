@@ -1,14 +1,5 @@
-"use client";
-
 import { useEffect, useRef, useState } from "react";
-
-interface LogLine {
-  id: number;
-  ts: string;
-  level: string;
-  msg: string;
-  attrs: string;
-}
+import type { LogLine } from "../lib/types";
 
 export default function LogStream({ runId }: { runId: string }) {
   const [lines, setLines] = useState<LogLine[]>([]);
@@ -21,13 +12,9 @@ export default function LogStream({ runId }: { runId: string }) {
     es.onerror = () => setConnected(false);
     es.onmessage = (ev) => {
       try {
-        const batch: LogLine[] = JSON.parse(ev.data);
-        if (batch.length > 0) {
-          setLines((prev) => [...prev, ...batch]);
-        }
-      } catch {
-        /* ignore malformed frame */
-      }
+        const batch: LogLine[] = JSON.parse(ev.data as string);
+        if (batch.length > 0) setLines((prev) => [...prev, ...batch]);
+      } catch { /* ignore malformed frame */ }
     };
     return () => es.close();
   }, [runId]);
@@ -46,19 +33,16 @@ export default function LogStream({ runId }: { runId: string }) {
         </span>
       </h2>
       <div className="log" ref={boxRef}>
-        {lines.length === 0 ? (
-          <div className="muted">Waiting for log output…</div>
-        ) : (
-          lines.map((l) => (
-            <div className="log-line" key={l.id}>
-              <span className="log-ts">{new Date(l.ts).toLocaleTimeString()}</span>
-              <span className={`log-${l.level}`}>
-                {l.msg}
-                {l.attrs && l.attrs !== "" ? ` ${l.attrs}` : ""}
+        {lines.length === 0
+          ? <div className="muted">Waiting for log output…</div>
+          : lines.map((l) => (
+            <div className="log-line" key={l.ID}>
+              <span className="log-ts">{new Date(l.TS).toLocaleTimeString()}</span>
+              <span className={`log-${l.Level}`}>
+                {l.Msg}{l.Attrs && l.Attrs !== "" ? ` ${l.Attrs}` : ""}
               </span>
             </div>
-          ))
-        )}
+          ))}
       </div>
     </div>
   );

@@ -97,8 +97,21 @@ func fakeClaude(t *testing.T, body string) string {
 	dir := t.TempDir()
 	script := "#!/bin/sh\n" + body + "\n"
 	path := filepath.Join(dir, "claude")
-	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o755)
+	if err != nil {
+		t.Fatalf("creating fake claude: %v", err)
+	}
+	if _, err := f.WriteString(script); err != nil {
+		f.Close()
 		t.Fatalf("writing fake claude: %v", err)
+	}
+	// Explicit close + sync before exec to avoid ETXTBSY on Linux.
+	if err := f.Sync(); err != nil {
+		f.Close()
+		t.Fatalf("syncing fake claude: %v", err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatalf("closing fake claude: %v", err)
 	}
 	return dir
 }
