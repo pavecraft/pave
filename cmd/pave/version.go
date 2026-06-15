@@ -12,11 +12,9 @@ var version = "dev"
 func newVersionCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
-		Short: "Show pave and pave UI versions",
+		Short: "Show pave version",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			out := cmd.OutOrStdout()
-			fmt.Fprintf(out, "pave:     %s\n", version)
-			fmt.Fprintf(out, "pave UI:  %s (embedded)\n", version)
+			fmt.Fprintln(cmd.OutOrStdout(), version)
 			return nil
 		},
 	}

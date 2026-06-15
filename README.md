@@ -91,7 +91,7 @@ A `FEATURES.md` entry looks like:
 | `pave status [--scan]` | Show implemented vs. pending. `--scan` refines from the codebase. |
 | `pave run [flags]` | Implement pending features (interactive). |
 | `pave limits` | Report rate-limit status and next reset. |
-| `pave ui` | Launch the local viewer. Downloads automatically on first run. |
+| `pave ui` | Launch the local web UI (embedded in the binary). |
 
 ### `pave run` flags
 
@@ -145,8 +145,7 @@ limiter:
   backoff_max: 5h                # cap on backoff
 
 ui:
-  path: .pave/ui                 # where the downloaded UI bundle is stored
-  port: 4000                     # port for the local viewer
+  port: 4000                     # port for the local viewer (default)
 ```
 
 ### Database drivers
@@ -158,35 +157,26 @@ ui:
 | `turso` | `libsql://your-db.turso.io` | Set `TURSO_AUTH_TOKEN` in the env. |
 
 The driver and DSN can be overridden with the `PAVE_DRIVER` and `PAVE_DSN`
-environment variables; `pave ui` injects these automatically from `pave.yaml`.
+environment variables.
 
 ## UI
 
-pave ships a local web viewer you can start with:
+pave ships a built-in web viewer you can start with:
 
 ```sh
-pave ui
+pave ui            # opens http://localhost:4000
+pave ui -P 8080    # custom port
 ```
 
-On first run, pave downloads the pre-built UI bundle matching your pave version
-and opens `http://localhost:4000` in your browser automatically. No Node.js or
-`npm install` required — the bundle is self-contained.
+The UI is embedded directly in the `pave` binary — no Node.js, no download,
+no `npm install`. It connects to the same database configured in `pave.yaml`
+and shows live run data.
 
-The viewer connects to the same database configured in `pave.yaml`, so it always
-shows the live data from your current project. To change the port or storage
-location, edit `pave.yaml`:
+### `pave ui` flags
 
-```yaml
-ui:
-  port: 4000      # default
-  path: .pave/ui  # default; the downloaded bundle is stored here
-```
-
-You can also override per-run:
-
-```sh
-pave ui --port 8080
-```
+| Flag | Description |
+|---|---|
+| `-P, --port <N>` | Port to listen on (default `4000`). |
 
 ## How it works
 

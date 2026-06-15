@@ -31,7 +31,7 @@ func newUICmd() *cobra.Command {
 			return runUI(cmd, configFlag, port)
 		},
 	}
-	cmd.Flags().IntVarP(&port, "port", "p", 0, "port for the UI server (overrides ui.port in pave.yaml)")
+	cmd.Flags().IntVarP(&port, "port", "P", 0, "port for the UI server (default 4000)")
 	return cmd
 }
 
