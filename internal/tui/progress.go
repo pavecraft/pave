@@ -13,12 +13,12 @@ import (
 var spinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 
 const (
-	ansiReset = "\033[0m"
-	ansiGreen = "\033[32m"
-	ansiRed   = "\033[31m"
-	ansiCyan  = "\033[36m"
-	ansiDim   = "\033[2m"
-	ansiUp        = "\033[%dA" // move cursor up N lines (stays on same column)
+	ansiReset     = "\033[0m"
+	ansiGreen     = "\033[32m"
+	ansiRed       = "\033[31m"
+	ansiCyan      = "\033[36m"
+	ansiDim       = "\033[2m"
+	ansiUp        = "\033[%dA"  // move cursor up N lines (stays on same column)
 	ansiClear     = "\r\033[2K" // carriage return + erase entire line → always at col 0
 	ansiEraseDown = "\033[J"    // erase from cursor to end of display
 )
