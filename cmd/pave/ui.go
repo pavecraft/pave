@@ -21,8 +21,9 @@ import (
 	"github.com/xoai/pave/internal/proc"
 )
 
-// uiReleaseURL: first %s is the tag (v-prefixed), second %s is the version (no v prefix).
-const uiReleaseURL = "https://github.com/pavecraft/pave/releases/download/v%s/pave-ui_%s.tar.gz"
+// uiReleaseURL constructs the asset URL from the release tag (v-prefixed) and
+// the bare version (no v prefix): .../download/v1.0.3/pave-ui_1.0.3.tar.gz
+const uiReleaseURL = "https://github.com/pavecraft/pave/releases/download/%s/pave-ui_%s.tar.gz"
 
 func newUICmd() *cobra.Command {
 	var (
@@ -115,10 +116,23 @@ func installedUIVersion(destDir string) string {
 	return strings.TrimSpace(string(data))
 }
 
+// versionTag returns ver with a "v" prefix, adding it only if absent.
+func versionTag(ver string) string {
+	if strings.HasPrefix(ver, "v") {
+		return ver
+	}
+	return "v" + ver
+}
+
+// versionBare returns ver without a leading "v".
+func versionBare(ver string) string {
+	return strings.TrimPrefix(ver, "v")
+}
+
 // downloadUI fetches the pre-built standalone bundle for the given version and
 // extracts it into destDir.
 func downloadUI(destDir, ver string) error {
-	url := fmt.Sprintf(uiReleaseURL, ver, ver)
+	url := fmt.Sprintf(uiReleaseURL, versionTag(ver), versionBare(ver))
 	resp, err := http.Get(url) //nolint:noctx
 	if err != nil {
 		return fmt.Errorf("fetching %s: %w", url, err)
