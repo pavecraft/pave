@@ -26,11 +26,28 @@ See [CLAUDE.md](CLAUDE.md) for the rules every contributor (human or agent) foll
 
 ## Installation
 
+### Quick install (Linux & macOS)
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/pavecraft/pave/main/install.sh | bash
+```
+
+This downloads the latest release binary to `~/.local/bin/pave`. No Go required.
+
+To install a specific version or to a custom directory:
+
+```sh
+PAVE_VERSION=v1.2.3 curl -fsSL https://raw.githubusercontent.com/pavecraft/pave/main/install.sh | bash
+PAVE_INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/pavecraft/pave/main/install.sh | bash
+```
+
+### From source (Go 1.22+)
+
 ```sh
 go install github.com/xoai/pave/cmd/pave@latest
 ```
 
-Or build from source (produces a single static binary, no CGO):
+Or build locally (single static binary, no CGO):
 
 ```sh
 CGO_ENABLED=0 go build -o pave ./cmd/pave
