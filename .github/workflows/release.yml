@@ -36,6 +36,16 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Build UI
+        working-directory: ui
+        run: npm ci && npm run build
+
       - uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
@@ -44,44 +54,3 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GORELEASER_CURRENT_TAG: ${{ github.ref_name }}
-
-  ui-release:
-    name: Build and release UI
-    runs-on: ubuntu-latest
-    needs: release
-    defaults:
-      run:
-        working-directory: ui
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: npm
-          cache-dependency-path: ui/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build standalone
-        run: npm run build
-        env:
-          NEXT_PUBLIC_PAVE_VERSION: ${{ github.ref_name }}
-
-      - name: Package standalone bundle
-        run: |
-          cp -r .next/static .next/standalone/.next/static
-          mkdir -p .next/standalone/public
-          cp -r public/. .next/standalone/public/ 2>/dev/null || true
-          VERSION=${GITHUB_REF_NAME#v}
-          tar -czf ../pave-ui_${VERSION}.tar.gz -C .next/standalone .
-
-      - name: Upload release asset
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          VERSION=${GITHUB_REF_NAME#v}
-          gh release upload ${{ github.ref_name }} \
-            ../pave-ui_${VERSION}.tar.gz \
-            --repo pavecraft/pave

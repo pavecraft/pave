@@ -4,10 +4,14 @@
 # Local state
 .pave/
 
-# Node / Next.js (ui/)
+# Node / Vite (ui/)
 node_modules/
 .next/
 out/
+
+# UI build output — populated by "cd ui && npm run build" before go build
+internal/uistatic/dist/*
+!internal/uistatic/dist/.gitkeep
 
 # OS / editor
 .DS_Store

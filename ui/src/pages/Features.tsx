@@ -1,19 +1,23 @@
-import { featureHistory } from "@/lib/queries";
+import { useEffect, useState } from "react";
+import { featureHistory, type FeatureHistoryRow } from "../lib/api";
 
-export const dynamic = "force-dynamic";
+export default function Features() {
+  const [rows, setRows] = useState<FeatureHistoryRow[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-export default async function FeaturesPage() {
-  let rows;
-  try {
-    rows = await featureHistory();
-  } catch (e) {
+  useEffect(() => {
+    featureHistory()
+      .then(setRows)
+      .catch((e: unknown) => setError(String(e)));
+  }, []);
+
+  if (error)
     return (
       <div className="card">
         <h2>Cannot read the pave database</h2>
-        <pre>{String(e)}</pre>
+        <pre>{error}</pre>
       </div>
     );
-  }
 
   return (
     <>
@@ -34,14 +38,12 @@ export default async function FeaturesPage() {
             </thead>
             <tbody>
               {rows.map((r) => {
-                const successes = Number(r.successes) || 0;
-                const attempts = Number(r.attempts) || 0;
-                const rate = attempts ? Math.round((successes / attempts) * 100) : 0;
+                const rate = r.Attempts ? Math.round((r.Successes / r.Attempts) * 100) : 0;
                 return (
-                  <tr key={r.feature_id}>
-                    <td className="mono">{r.feature_id}</td>
-                    <td>{attempts}</td>
-                    <td>{successes}</td>
+                  <tr key={r.FeatureID}>
+                    <td className="mono">{r.FeatureID}</td>
+                    <td>{r.Attempts}</td>
+                    <td>{r.Successes}</td>
                     <td>{rate}%</td>
                   </tr>
                 );

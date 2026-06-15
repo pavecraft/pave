@@ -201,6 +201,62 @@ func TestLimiterWindow(t *testing.T) {
 	}
 }
 
+func TestGetAttempt(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	st := newTestStore(t)
+	must(t, st.CreateRun(ctx, Run{ID: "r", Project: "/p", Provider: "claude", StartedAt: time.Now(), Status: RunRunning}))
+
+	a := Attempt{ID: "a1", RunID: "r", FeatureID: "f1", Provider: "claude", Prompt: "do it", StartedAt: time.Now()}
+	must(t, st.CreateAttempt(ctx, a))
+
+	got, err := st.GetAttempt(ctx, "a1")
+	if err != nil {
+		t.Fatalf("GetAttempt: %v", err)
+	}
+	if got.ID != "a1" || got.FeatureID != "f1" {
+		t.Errorf("GetAttempt = %+v", got)
+	}
+
+	if _, err := st.GetAttempt(ctx, "missing"); err == nil {
+		t.Error("expected ErrNotFound for missing attempt")
+	}
+}
+
+func TestFeatureHistory(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	st := newTestStore(t)
+	must(t, st.CreateRun(ctx, Run{ID: "r", Project: "/p", Provider: "claude", StartedAt: time.Now(), Status: RunRunning}))
+
+	now := time.Now()
+	end := now.Add(time.Second)
+	attempts := []Attempt{
+		{ID: "a1", RunID: "r", FeatureID: "feat-a", Provider: "claude", Prompt: "p", StartedAt: now, EndedAt: &end, Success: true, ExitCode: 0},
+		{ID: "a2", RunID: "r", FeatureID: "feat-a", Provider: "claude", Prompt: "p", StartedAt: now, EndedAt: &end, Success: false, ExitCode: 1},
+		{ID: "a3", RunID: "r", FeatureID: "feat-b", Provider: "claude", Prompt: "p", StartedAt: now, EndedAt: &end, Success: true, ExitCode: 0},
+	}
+	for i := range attempts {
+		must(t, st.CreateAttempt(ctx, attempts[i]))
+		must(t, st.FinishAttempt(ctx, attempts[i]))
+	}
+
+	rows, err := st.FeatureHistory(ctx)
+	if err != nil {
+		t.Fatalf("FeatureHistory: %v", err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("expected 2 rows, got %d", len(rows))
+	}
+	// feat-a has 2 attempts (most), should come first.
+	if rows[0].FeatureID != "feat-a" || rows[0].Attempts != 2 || rows[0].Successes != 1 {
+		t.Errorf("rows[0] = %+v", rows[0])
+	}
+	if rows[1].FeatureID != "feat-b" || rows[1].Attempts != 1 || rows[1].Successes != 1 {
+		t.Errorf("rows[1] = %+v", rows[1])
+	}
+}
+
 func must(t *testing.T, err error) {
 	t.Helper()
 	if err != nil {

@@ -1,51 +1,41 @@
 package main
 
 import (
-	"archive/tar"
-	"compress/gzip"
 	"context"
+	"errors"
 	"fmt"
-	"io"
+	"io/fs"
 	"net/http"
-	"os"
 	"os/signal"
-	"path/filepath"
 	"runtime"
-	"strings"
 	"syscall"
 	"time"
 
 	"github.com/spf13/cobra"
 
+	"github.com/pavecraft/pave/internal/api"
 	"github.com/pavecraft/pave/internal/config"
 	"github.com/pavecraft/pave/internal/proc"
+	"github.com/pavecraft/pave/internal/state"
+	"github.com/pavecraft/pave/internal/uistatic"
 )
 
-// uiReleaseURL constructs the asset URL from the release tag (v-prefixed) and
-// the bare version (no v prefix): .../download/v1.0.3/pave-ui_1.0.3.tar.gz
-const uiReleaseURL = "https://github.com/pavecraft/pave/releases/download/%s/pave-ui_%s.tar.gz"
-
 func newUICmd() *cobra.Command {
-	var (
-		uiDir string
-		port  int
-	)
+	var port int
 	cmd := &cobra.Command{
 		Use:   "ui",
-		Short: "Launch the local Next.js viewer (downloads automatically on first run)",
-		Long: "Starts the pave UI server. On first run, pave downloads the pre-built UI\n" +
-			"for the matching version and opens your browser automatically.\n" +
+		Short: "Launch the pave UI server",
+		Long: "Starts the pave UI server backed by a built-in Go HTTP server.\n" +
 			"The viewer reads the same database configured in pave.yaml.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runUI(cmd, configFlag, uiDir, port)
+			return runUI(cmd, configFlag, port)
 		},
 	}
-	cmd.Flags().StringVar(&uiDir, "ui-dir", "", "path to the UI directory (overrides ui.path in pave.yaml)")
 	cmd.Flags().IntVarP(&port, "port", "p", 0, "port for the UI server (overrides ui.port in pave.yaml)")
 	return cmd
 }
 
-func runUI(cmd *cobra.Command, configPath, uiDirFlag string, portFlag int) error {
+func runUI(cmd *cobra.Command, configPath string, portFlag int) error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
@@ -54,147 +44,45 @@ func runUI(cmd *cobra.Command, configPath, uiDirFlag string, portFlag int) error
 		return err
 	}
 
-	uiDir := cfg.UI.Path
-	if uiDirFlag != "" {
-		uiDir = uiDirFlag
-	}
 	port := cfg.UI.Port
 	if portFlag != 0 {
 		port = portFlag
 	}
 
-	uiVersion := cfg.UI.Version
-	if uiVersion == "" {
-		uiVersion = version
-	}
-	if info, err := os.Stat(uiDir); err != nil || !info.IsDir() {
-		fmt.Fprintf(cmd.OutOrStdout(), "Downloading pave UI %s...\n", uiVersion)
-		if err := downloadUI(uiDir, uiVersion); err != nil {
-			return fmt.Errorf("downloading UI: %w", err)
-		}
-		fmt.Fprintf(cmd.OutOrStdout(), "UI downloaded to %s\n", uiDir)
-	}
-
-	env, err := uiEnv(cfg)
+	store, err := state.New(ctx, cfg.Database)
 	if err != nil {
-		return err
+		return fmt.Errorf("opening database: %w", err)
 	}
-	env = append(env, fmt.Sprintf("PORT=%d", port), "HOSTNAME=0.0.0.0")
+	defer store.Close()
 
-	fmt.Fprintf(cmd.OutOrStdout(), "Starting pave UI on http://localhost:%d (database: %s)\n", port, cfg.Database.Driver)
+	files, err := fs.Sub(uistatic.Files, "dist")
+	if err != nil {
+		return fmt.Errorf("loading UI assets: %w", err)
+	}
 
+	handler := api.NewServer(store, files)
+	srv := &http.Server{Addr: fmt.Sprintf(":%d", port), Handler: handler}
+	go func() {
+		<-ctx.Done()
+		shutCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		srv.Shutdown(shutCtx) //nolint:errcheck
+	}()
+
+	addr := fmt.Sprintf("http://localhost:%d", port)
+	fmt.Fprintf(cmd.OutOrStdout(), "Starting pave UI on %s\n", addr)
 	go func() {
 		select {
-		case <-time.After(2 * time.Second):
-			_ = openBrowser(ctx, fmt.Sprintf("http://localhost:%d", port))
+		case <-time.After(500 * time.Millisecond):
+			_ = openBrowser(ctx, addr)
 		case <-ctx.Done():
 		}
 	}()
 
-	p, err := proc.StartIO(ctx, "node", []string{"server.js"}, uiDir, proc.IOOptions{
-		Stdin:  os.Stdin,
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-		Env:    env,
-	})
-	if err != nil {
-		return fmt.Errorf("starting UI server: %w", err)
-	}
-	if _, err := p.Wait(); err != nil {
+	if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
 	return nil
-}
-
-// installedUIVersion returns the version string recorded in destDir/VERSION, or
-// an empty string if the file is absent or unreadable.
-func installedUIVersion(destDir string) string {
-	data, err := os.ReadFile(filepath.Join(destDir, "VERSION"))
-	if err != nil {
-		return ""
-	}
-	return strings.TrimSpace(string(data))
-}
-
-// versionTag returns ver with a "v" prefix, adding it only if absent.
-func versionTag(ver string) string {
-	if strings.HasPrefix(ver, "v") {
-		return ver
-	}
-	return "v" + ver
-}
-
-// versionBare returns ver without a leading "v".
-func versionBare(ver string) string {
-	return strings.TrimPrefix(ver, "v")
-}
-
-// downloadUI fetches the pre-built standalone bundle for the given version and
-// extracts it into destDir.
-func downloadUI(destDir, ver string) error {
-	url := fmt.Sprintf(uiReleaseURL, versionTag(ver), versionBare(ver))
-	resp, err := http.Get(url) //nolint:noctx
-	if err != nil {
-		return fmt.Errorf("fetching %s: %w", url, err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status %s from %s", resp.Status, url)
-	}
-
-	if err := os.MkdirAll(destDir, 0o755); err != nil {
-		return fmt.Errorf("creating %s: %w", destDir, err)
-	}
-
-	gr, err := gzip.NewReader(resp.Body)
-	if err != nil {
-		return fmt.Errorf("reading gzip stream: %w", err)
-	}
-	defer gr.Close()
-
-	absDestDir, err := filepath.Abs(destDir)
-	if err != nil {
-		return fmt.Errorf("resolving destDir: %w", err)
-	}
-
-	tr := tar.NewReader(gr)
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return fmt.Errorf("reading tar: %w", err)
-		}
-
-		// Guard against path traversal: ensure the resolved path stays inside destDir.
-		target := filepath.Join(absDestDir, filepath.Clean("/"+hdr.Name))
-		if !strings.HasPrefix(target, absDestDir+string(filepath.Separator)) {
-			continue
-		}
-
-		switch hdr.Typeflag {
-		case tar.TypeDir:
-			if err := os.MkdirAll(target, 0o755); err != nil {
-				return err
-			}
-		case tar.TypeReg:
-			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
-				return err
-			}
-			f, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.FileMode(hdr.Mode))
-			if err != nil {
-				return err
-			}
-			if _, err := io.Copy(f, tr); err != nil {
-				f.Close()
-				return err
-			}
-			f.Close()
-		}
-	}
-
-	return os.WriteFile(filepath.Join(destDir, "VERSION"), []byte(ver), 0o644)
 }
 
 // openBrowser launches the system browser for url using the platform command.
@@ -218,25 +106,4 @@ func openBrowser(ctx context.Context, url string) error {
 	}
 	_, _ = p.Wait()
 	return nil
-}
-
-// uiEnv builds the environment that points the viewer at pave's database. For
-// SQLite the DSN is resolved to an absolute path so it works from the ui/ dir.
-func uiEnv(cfg config.Config) ([]string, error) {
-	dsn := cfg.Database.DSN
-	if cfg.Database.Driver == config.DriverSQLite && !filepath.IsAbs(dsn) {
-		abs, err := filepath.Abs(dsn)
-		if err != nil {
-			return nil, fmt.Errorf("resolving sqlite dsn: %w", err)
-		}
-		dsn = abs
-	}
-	env := []string{
-		"PAVE_DRIVER=" + string(cfg.Database.Driver),
-		"PAVE_DSN=" + dsn,
-	}
-	if tok := os.Getenv("TURSO_AUTH_TOKEN"); tok != "" {
-		env = append(env, "TURSO_AUTH_TOKEN="+tok)
-	}
-	return env, nil
 }

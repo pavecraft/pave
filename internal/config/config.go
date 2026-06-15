@@ -33,11 +33,9 @@ type Limiter struct {
 	BackoffMax     time.Duration `yaml:"backoff_max"`
 }
 
-// UI configures the local Next.js viewer launched by `pave ui`.
+// UI configures the pave UI server launched by `pave ui`.
 type UI struct {
-	Path    string `yaml:"path"`
-	Port    int    `yaml:"port"`
-	Version string `yaml:"version"` // UI release to download; empty = same as pave binary
+	Port int `yaml:"port"`
 }
 
 // Config is the parsed and validated contents of pave.yaml.
@@ -76,7 +74,6 @@ func Default() Config {
 			BackoffMax:     5 * time.Hour,
 		},
 		UI: UI{
-			Path: ".pave/ui",
 			Port: 4000,
 		},
 	}
@@ -139,9 +136,6 @@ func (c *Config) applyDefaults() {
 	}
 	if c.Limiter.BackoffMax == 0 {
 		c.Limiter.BackoffMax = d.Limiter.BackoffMax
-	}
-	if c.UI.Path == "" {
-		c.UI.Path = d.UI.Path
 	}
 	if c.UI.Port == 0 {
 		c.UI.Port = d.UI.Port
