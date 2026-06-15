@@ -12,12 +12,11 @@ import (
 func TestProgressLifecycle(t *testing.T) {
 	t.Parallel()
 	var buf bytes.Buffer
-	ids := []string{"feat-a", "feat-b", "feat-c"}
-	p := New(&buf, ids, false) // plain text: no ANSI, no redraw
+	p := New(&buf, false) // plain text: no ANSI, no redraw
 
 	p.FeatureStarted("feat-a")
-	time.Sleep(10 * time.Millisecond)
 	p.FeatureFinished("feat-a", project.StatusImplemented)
+	p.FeatureStarted("feat-b")
 	p.FeatureSkipped("feat-b")
 	p.FeatureStarted("feat-c")
 	p.FeatureRetry("feat-c", 1)
@@ -25,18 +24,58 @@ func TestProgressLifecycle(t *testing.T) {
 	p.Stop()
 
 	out := buf.String()
-	// Initial render must contain all IDs.
-	for _, id := range ids {
-		if !strings.Contains(out, id) {
-			t.Errorf("output missing %q", id)
+	if !strings.Contains(out, "✓") {
+		t.Error("missing ✓ for implemented feature")
+	}
+	if !strings.Contains(out, "✗") {
+		t.Error("missing ✗ for failed feature")
+	}
+	if !strings.Contains(out, "feat-a") || !strings.Contains(out, "feat-c") {
+		t.Error("missing feature IDs in output")
+	}
+}
+
+func TestProgressNonTTY(t *testing.T) {
+	t.Parallel()
+	var buf bytes.Buffer
+	p := New(&buf, false)
+
+	p.FeatureStarted("feat-a")
+	p.FeatureFinished("feat-a", project.StatusImplemented)
+	p.FeatureSkipped("feat-b")
+	p.Stop()
+
+	lines := strings.Split(strings.TrimRight(buf.String(), "\n"), "\n")
+	// Expect: "> feat-a", "✓ feat-a", "- feat-b" — 3 lines
+	if len(lines) < 3 {
+		t.Errorf("expected at least 3 lines, got %d: %q", len(lines), buf.String())
+	}
+	for _, line := range lines {
+		if strings.Contains(line, "\033") {
+			t.Errorf("unexpected ANSI escape in non-TTY output: %q", line)
 		}
+	}
+}
+
+func TestProgressRetry(t *testing.T) {
+	t.Parallel()
+	var buf bytes.Buffer
+	p := New(&buf, false)
+
+	p.FeatureStarted("feat-a")
+	p.FeatureRetry("feat-a", 2)
+	p.FeatureFinished("feat-a", project.StatusFailed)
+	p.Stop()
+
+	if !strings.Contains(buf.String(), "retry") {
+		t.Error("expected 'retry' in output after FeatureRetry")
 	}
 }
 
 func TestProgressANSIDoesNotPanic(t *testing.T) {
 	t.Parallel()
 	var buf bytes.Buffer
-	p := New(&buf, []string{"feat-x", "feat-y"}, true)
+	p := New(&buf, true)
 	p.FeatureStarted("feat-x")
 	time.Sleep(200 * time.Millisecond) // let the spinner tick a few times
 	p.FeatureFinished("feat-x", project.StatusImplemented)
@@ -47,21 +86,19 @@ func TestProgressANSIDoesNotPanic(t *testing.T) {
 	}
 }
 
-func TestProgressDuplicateIDs(t *testing.T) {
+func TestProgressStopWithActiveFeature(t *testing.T) {
 	t.Parallel()
 	var buf bytes.Buffer
-	// Pass the same ID three times; only one row should be created.
-	ids := []string{"feat-a", "feat-a", "feat-a"}
-	p := New(&buf, ids, false)
+	p := New(&buf, false)
+	p.FeatureStarted("feat-interrupted")
+	// Stop without calling FeatureFinished — simulates mid-run interruption.
 	p.Stop()
-	if got := len(p.rows); got != 1 {
-		t.Errorf("rows = %d, want 1 for duplicate IDs", got)
-	}
+	// Should not deadlock or panic.
 }
 
-func TestProgressEmptyList(t *testing.T) {
+func TestProgressEmptyRun(t *testing.T) {
 	t.Parallel()
 	var buf bytes.Buffer
-	p := New(&buf, nil, false)
+	p := New(&buf, false)
 	p.Stop() // must not panic or deadlock
 }
