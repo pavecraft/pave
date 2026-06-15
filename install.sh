@@ -41,7 +41,9 @@ if [ -z "$VERSION" ]; then
   exit 1
 fi
 
-ASSET="pave_${VERSION}_${OS}_${ARCH}.tar.gz"
+# GoReleaser strips the leading 'v' from the version in asset filenames.
+VERSION_BARE="${VERSION#v}"
+ASSET="pave_${VERSION_BARE}_${OS}_${ARCH}.tar.gz"
 URL="https://github.com/${REPO}/releases/download/${VERSION}/${ASSET}"
 
 echo "Installing pave ${VERSION} (${OS}/${ARCH}) → ${INSTALL_DIR}/pave"
