@@ -276,7 +276,9 @@ func (e *Engine) applyControl(ctx context.Context, run state.Run, msg string, fn
 		e.logger().Warn("control failed", "action", msg, "err", err)
 		return
 	}
-	e.print("  %s\n", msg)
+	if e.Progress == nil {
+		e.print("  %s\n", msg)
+	}
 	_ = e.Store.AppendLogLine(ctx, state.LogLine{
 		RunID: run.ID, TS: time.Now(), Level: "info", Msg: msg,
 	})
