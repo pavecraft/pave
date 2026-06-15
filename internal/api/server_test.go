@@ -23,7 +23,7 @@ type mockStore struct {
 	featureHistory []state.FeatureHistoryRow
 }
 
-func (m *mockStore) CreateRun(_ context.Context, r state.Run) error        { return nil }
+func (m *mockStore) CreateRun(_ context.Context, r state.Run) error { return nil }
 func (m *mockStore) UpdateRunStatus(_ context.Context, _ string, _ state.RunStatus, _ *time.Time) error {
 	return nil
 }
@@ -59,8 +59,8 @@ func (m *mockStore) GetFeature(_ context.Context, runID, id string) (state.Featu
 	}
 	return state.FeatureRow{}, state.ErrNotFound{What: "feature " + id}
 }
-func (m *mockStore) CreateAttempt(_ context.Context, _ state.Attempt) error  { return nil }
-func (m *mockStore) FinishAttempt(_ context.Context, _ state.Attempt) error  { return nil }
+func (m *mockStore) CreateAttempt(_ context.Context, _ state.Attempt) error { return nil }
+func (m *mockStore) FinishAttempt(_ context.Context, _ state.Attempt) error { return nil }
 func (m *mockStore) ListAttempts(_ context.Context, runID string) ([]state.Attempt, error) {
 	var out []state.Attempt
 	for _, a := range m.attempts {
@@ -100,9 +100,9 @@ func (m *mockStore) Close() error { return nil }
 // minimalFS returns a tiny fs.FS with just an index.html for static serving tests.
 func minimalFS() fs.FS {
 	return fstest.MapFS{
-		"index.html":        &fstest.MapFile{Data: []byte("<html>pave</html>")},
-		"assets/index.js":   &fstest.MapFile{Data: []byte("console.log('pave')")},
-		"assets/index.css":  &fstest.MapFile{Data: []byte("body{}")},
+		"index.html":       &fstest.MapFile{Data: []byte("<html>pave</html>")},
+		"assets/index.js":  &fstest.MapFile{Data: []byte("console.log('pave')")},
+		"assets/index.css": &fstest.MapFile{Data: []byte("body{}")},
 	}
 }
 
@@ -298,7 +298,10 @@ func TestGetAttempt(t *testing.T) {
 	}}
 	srv := newTestServer(store)
 
-	tests := []struct{ path string; code int }{
+	tests := []struct {
+		path string
+		code int
+	}{
 		{"/api/attempts/a1", http.StatusOK},
 		{"/api/attempts/missing", http.StatusNotFound},
 	}
