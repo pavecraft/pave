@@ -47,6 +47,18 @@ func TestProgressANSIDoesNotPanic(t *testing.T) {
 	}
 }
 
+func TestProgressDuplicateIDs(t *testing.T) {
+	t.Parallel()
+	var buf bytes.Buffer
+	// Pass the same ID three times; only one row should be created.
+	ids := []string{"feat-a", "feat-a", "feat-a"}
+	p := New(&buf, ids, false)
+	p.Stop()
+	if got := len(p.rows); got != 1 {
+		t.Errorf("rows = %d, want 1 for duplicate IDs", got)
+	}
+}
+
 func TestProgressEmptyList(t *testing.T) {
 	t.Parallel()
 	var buf bytes.Buffer

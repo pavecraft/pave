@@ -66,6 +66,9 @@ func New(out io.Writer, featureIDs []string, ansi bool) *Progress {
 		doneCh: make(chan struct{}),
 	}
 	for _, id := range featureIDs {
+		if _, exists := p.index[id]; exists {
+			continue // skip duplicate IDs
+		}
 		r := &row{id: id, state: rowPending}
 		p.rows = append(p.rows, r)
 		p.index[id] = r
