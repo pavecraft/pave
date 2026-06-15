@@ -74,12 +74,14 @@ jobs:
           cp -r .next/static .next/standalone/.next/static
           mkdir -p .next/standalone/public
           cp -r public/. .next/standalone/public/ 2>/dev/null || true
-          tar -czf ../pave-ui_${{ github.ref_name }}.tar.gz -C .next/standalone .
+          VERSION=${GITHUB_REF_NAME#v}
+          tar -czf ../pave-ui_${VERSION}.tar.gz -C .next/standalone .
 
       - name: Upload release asset
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          VERSION=${GITHUB_REF_NAME#v}
           gh release upload ${{ github.ref_name }} \
-            ../pave-ui_${{ github.ref_name }}.tar.gz \
+            ../pave-ui_${VERSION}.tar.gz \
             --repo pavecraft/pave
