@@ -31,6 +31,7 @@ limiter:
 ui:
   path: ".pave/ui"             # directory where the UI assets are stored
   port: 4000                   # port for the local UI server
+  version: ""                  # UI release to download; empty = same version as pave binary
 `
 
 // DefaultFeaturesMD is the starter FEATURES.md content.

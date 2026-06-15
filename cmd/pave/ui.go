@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
@@ -60,9 +61,13 @@ func runUI(cmd *cobra.Command, configPath, uiDirFlag string, portFlag int) error
 		port = portFlag
 	}
 
+	uiVersion := cfg.UI.Version
+	if uiVersion == "" {
+		uiVersion = version
+	}
 	if _, err := os.Stat(filepath.Join(uiDir, "server.js")); err != nil {
-		fmt.Fprintf(cmd.OutOrStdout(), "Downloading pave UI %s...\n", version)
-		if err := downloadUI(uiDir, version); err != nil {
+		fmt.Fprintf(cmd.OutOrStdout(), "Downloading pave UI %s...\n", uiVersion)
+		if err := downloadUI(uiDir, uiVersion); err != nil {
 			return fmt.Errorf("downloading UI: %w", err)
 		}
 		fmt.Fprintf(cmd.OutOrStdout(), "UI downloaded to %s\n", uiDir)
@@ -97,6 +102,16 @@ func runUI(cmd *cobra.Command, configPath, uiDirFlag string, portFlag int) error
 		return err
 	}
 	return nil
+}
+
+// installedUIVersion returns the version string recorded in destDir/VERSION, or
+// an empty string if the file is absent or unreadable.
+func installedUIVersion(destDir string) string {
+	data, err := os.ReadFile(filepath.Join(destDir, "VERSION"))
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(data))
 }
 
 // downloadUI fetches the pre-built standalone bundle for the given version and
@@ -158,7 +173,8 @@ func downloadUI(destDir, ver string) error {
 			f.Close()
 		}
 	}
-	return nil
+
+	return os.WriteFile(filepath.Join(destDir, "VERSION"), []byte(ver), 0o644)
 }
 
 // openBrowser launches the system browser for url using the platform command.
