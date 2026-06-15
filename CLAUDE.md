@@ -14,7 +14,7 @@ modifying `pave`.
 
 ## Git rules
 
-- **Never push directly to `main`.** All changes must go through a feature branch and PR.
+- **Never push directly to `main`.** Always create a feature branch and open a PR for review.
 - Branch naming: `feat/<topic>`, `fix/<topic>`, or `chore/<topic>`.
 - Do not commit or push until the user explicitly asks you to.
 
