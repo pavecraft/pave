@@ -152,6 +152,11 @@ func downloadUI(destDir, ver string) error {
 	}
 	defer gr.Close()
 
+	absDestDir, err := filepath.Abs(destDir)
+	if err != nil {
+		return fmt.Errorf("resolving destDir: %w", err)
+	}
+
 	tr := tar.NewReader(gr)
 	for {
 		hdr, err := tr.Next()
@@ -162,9 +167,9 @@ func downloadUI(destDir, ver string) error {
 			return fmt.Errorf("reading tar: %w", err)
 		}
 
-		// Guard against path traversal.
-		target := filepath.Join(destDir, filepath.Clean("/"+hdr.Name))
-		if !filepath.IsAbs(target) {
+		// Guard against path traversal: ensure the resolved path stays inside destDir.
+		target := filepath.Join(absDestDir, filepath.Clean("/"+hdr.Name))
+		if !strings.HasPrefix(target, absDestDir+string(filepath.Separator)) {
 			continue
 		}
 
