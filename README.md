@@ -83,56 +83,12 @@ A `FEATURES.md` entry looks like:
 - A trailing `(priority: N, depends: id1, id2)` block carries metadata.
 - The feature ID is the slug of the title (e.g. `add-user-login`).
 
-## Workflow
-
-### New project (no existing code)
-
-```sh
-pave init               # scaffold .pave/pave.yaml + FEATURES.md
-$EDITOR FEATURES.md     # list the features you want pave to implement
-pave run                # implement pending features
-```
-
-### Existing project (some features already in codebase)
-
-If your project already has code that satisfies some of the features, you have two options:
-
-**Option A — mark them manually** in FEATURES.md:
-```markdown
-- [x] Project scaffolding   # already done — pave skips [x] items
-- [ ] Add user login
-```
-
-**Option B — let pave detect them automatically:**
-```sh
-pave status --scan      # walks the codebase; marks features it finds as implemented
-pave run                # implements only what's still pending
-```
-
-Run `pave status --scan` before your first `pave run` when the codebase already has
-partial or complete implementations. After the first run, state is persisted in the
-database and subsequent `pave run` invocations pick up where they left off automatically.
-
-### Feature descriptions
-
-Each feature is a task-list entry in FEATURES.md. Descriptions can be as long as needed —
-write the full context an AI provider needs to implement the feature correctly:
-
-```markdown
-- [ ] Add user login — email + password auth with bcrypt hashing, JWT session tokens
-  stored in httpOnly cookies, rate-limit to 5 attempts/min, and a /login POST endpoint
-  (priority: 1)
-```
-
-The title (before `—`) becomes the feature ID slug used in state tracking. The description
-(after `—`) is included verbatim in the prompt sent to the AI provider.
-
 ## Commands
 
 | Command | Description |
 |---|---|
 | `pave init` | Scaffold `.pave/pave.yaml` and `FEATURES.md`; creates the database. Never overwrites existing files. |
-| `pave status [--scan]` | Show implemented vs. pending. `--scan` walks the codebase to auto-detect already-implemented features — run this before the first `pave run` on an existing project. |
+| `pave status [--scan]` | Show implemented vs. pending. `--scan` refines from the codebase. |
 | `pave run [flags]` | Implement pending features (interactive). |
 | `pave limits` | Report rate-limit status and next reset. |
 | `pave ui` | Launch the local web UI (embedded in the binary). |

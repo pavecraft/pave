@@ -81,8 +81,8 @@ export default function RunDetail() {
                   <td style={{ paddingLeft: 16 }}>
                     <span className={statusClass(f.Status)}>{f.Status}</span>
                   </td>
-                  <td style={{ maxWidth: 320 }}>
-                    <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={f.Title}>{f.Title}</div>
+                  <td>
+                    <div>{f.Title}</div>
                     <div className="muted mono" style={{ fontSize: 11 }}>{f.ID}</div>
                     {parseDeps(f.DependsOn).length > 0 && (
                       <div className="muted" style={{ fontSize: 11 }}>
