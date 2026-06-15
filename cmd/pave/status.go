@@ -8,10 +8,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/xoai/pave/internal/config"
-	"github.com/xoai/pave/internal/project"
-	"github.com/xoai/pave/internal/scanner"
-	"github.com/xoai/pave/internal/state"
+	"github.com/pavecraft/pave/internal/config"
+	"github.com/pavecraft/pave/internal/project"
+	"github.com/pavecraft/pave/internal/scanner"
+	"github.com/pavecraft/pave/internal/state"
 )
 
 func newStatusCmd() *cobra.Command {

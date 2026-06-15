@@ -5,7 +5,7 @@ modifying `pave`.
 
 ## Project basics
 
-- **Module:** `github.com/xoai/pave`
+- **Module:** `github.com/pavecraft/pave`
 - **Language:** Go 1.22+
 - **Build:** `CGO_ENABLED=0 go build ./cmd/pave`
 - **Test:** `go test ./... -race -count=1`

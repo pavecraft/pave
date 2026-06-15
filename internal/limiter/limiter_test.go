@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xoai/pave/internal/config"
-	"github.com/xoai/pave/internal/provider"
-	"github.com/xoai/pave/internal/state"
+	"github.com/pavecraft/pave/internal/config"
+	"github.com/pavecraft/pave/internal/provider"
+	"github.com/pavecraft/pave/internal/state"
 )
 
 func TestBackoff(t *testing.T) {

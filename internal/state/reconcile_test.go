@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xoai/pave/internal/project"
+	"github.com/pavecraft/pave/internal/project"
 )
 
 func TestReconcile(t *testing.T) {

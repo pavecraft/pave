@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xoai/pave/internal/project"
+	"github.com/pavecraft/pave/internal/project"
 )
 
 func TestProgressLifecycle(t *testing.T) {

@@ -17,8 +17,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/xoai/pave/internal/config"
-	"github.com/xoai/pave/internal/proc"
+	"github.com/pavecraft/pave/internal/config"
+	"github.com/pavecraft/pave/internal/proc"
 )
 
 // uiReleaseURL constructs the asset URL from the release tag (v-prefixed) and

@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/xoai/pave/internal/project"
+	"github.com/pavecraft/pave/internal/project"
 )
 
 // sqlStore implements Store over any database/sql backend, parameterized by a

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/xoai/pave/internal/project"
+	"github.com/pavecraft/pave/internal/project"
 )
 
 // compile-time check that Claude satisfies the interface.

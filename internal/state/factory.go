@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/xoai/pave/internal/config"
+	"github.com/pavecraft/pave/internal/config"
 )
 
 // New opens a Store for the configured database driver, running migrations as

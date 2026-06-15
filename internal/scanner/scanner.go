@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/xoai/pave/internal/project"
+	"github.com/pavecraft/pave/internal/project"
 )
 
 // skipDirs are directory names never descended into.

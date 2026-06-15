@@ -44,7 +44,7 @@ PAVE_INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/pav
 ### From source (Go 1.22+)
 
 ```sh
-go install github.com/xoai/pave/cmd/pave@latest
+go install github.com/pavecraft/pave/cmd/pave@latest
 ```
 
 Or build locally (single static binary, no CGO):
