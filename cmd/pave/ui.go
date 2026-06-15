@@ -1,12 +1,18 @@
 package main
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"context"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -14,27 +20,29 @@ import (
 	"github.com/xoai/pave/internal/proc"
 )
 
+const uiReleaseURL = "https://github.com/pavecraft/pave/releases/download/%s/pave-ui_%s.tar.gz"
+
 func newUICmd() *cobra.Command {
 	var (
 		uiDir string
-		port  string
+		port  int
 	)
 	cmd := &cobra.Command{
 		Use:   "ui",
-		Short: "Launch the local Next.js viewer (reads the same database)",
-		Long: "Starts the Next.js dev server in the ui/ directory with the configured\n" +
-			"database injected via PAVE_DRIVER/PAVE_DSN, so the viewer reads the same\n" +
-			"data pave writes. Requires Node and a one-time `npm install` in ui/.",
+		Short: "Launch the local Next.js viewer (downloads automatically on first run)",
+		Long: "Starts the pave UI server. On first run, pave downloads the pre-built UI\n" +
+			"for the matching version and opens your browser automatically.\n" +
+			"The viewer reads the same database configured in pave.yaml.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runUI(cmd, configFlag, uiDir, port)
 		},
 	}
-	cmd.Flags().StringVar(&uiDir, "ui-dir", "", "path to the ui/ directory (default: ./ui or $PAVE_UI_DIR)")
-	cmd.Flags().StringVar(&port, "port", "3000", "port for the dev server")
+	cmd.Flags().StringVar(&uiDir, "ui-dir", "", "path to the UI directory (overrides ui.path in pave.yaml)")
+	cmd.Flags().IntVarP(&port, "port", "p", 0, "port for the UI server (overrides ui.port in pave.yaml)")
 	return cmd
 }
 
-func runUI(cmd *cobra.Command, configPath, uiDir, port string) error {
+func runUI(cmd *cobra.Command, configPath, uiDirFlag string, portFlag int) error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
@@ -43,29 +51,47 @@ func runUI(cmd *cobra.Command, configPath, uiDir, port string) error {
 		return err
 	}
 
-	dir, err := resolveUIDir(uiDir)
-	if err != nil {
-		return err
+	uiDir := cfg.UI.Path
+	if uiDirFlag != "" {
+		uiDir = uiDirFlag
 	}
-	if _, err := os.Stat(filepath.Join(dir, "node_modules")); err != nil {
-		return fmt.Errorf("dependencies not installed; run `npm install` in %s first", dir)
+	port := cfg.UI.Port
+	if portFlag != 0 {
+		port = portFlag
+	}
+
+	if _, err := os.Stat(filepath.Join(uiDir, "server.js")); err != nil {
+		fmt.Fprintf(cmd.OutOrStdout(), "Downloading pave UI %s...\n", version)
+		if err := downloadUI(uiDir, version); err != nil {
+			return fmt.Errorf("downloading UI: %w", err)
+		}
+		fmt.Fprintf(cmd.OutOrStdout(), "UI downloaded to %s\n", uiDir)
 	}
 
 	env, err := uiEnv(cfg)
 	if err != nil {
 		return err
 	}
+	env = append(env, fmt.Sprintf("PORT=%d", port), "HOSTNAME=0.0.0.0")
 
-	fmt.Fprintf(cmd.OutOrStdout(), "Starting pave UI on http://localhost:%s (database: %s)\n", port, cfg.Database.Driver)
+	fmt.Fprintf(cmd.OutOrStdout(), "Starting pave UI on http://localhost:%d (database: %s)\n", port, cfg.Database.Driver)
 
-	p, err := proc.StartIO(ctx, "npm", []string{"run", "dev", "--", "--port", port}, dir, proc.IOOptions{
+	go func() {
+		select {
+		case <-time.After(2 * time.Second):
+			_ = openBrowser(ctx, fmt.Sprintf("http://localhost:%d", port))
+		case <-ctx.Done():
+		}
+	}()
+
+	p, err := proc.StartIO(ctx, "node", []string{"server.js"}, uiDir, proc.IOOptions{
 		Stdin:  os.Stdin,
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
 		Env:    env,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("starting UI server: %w", err)
 	}
 	if _, err := p.Wait(); err != nil {
 		return err
@@ -73,18 +99,89 @@ func runUI(cmd *cobra.Command, configPath, uiDir, port string) error {
 	return nil
 }
 
-// resolveUIDir locates the ui/ directory: the flag, then $PAVE_UI_DIR, then ./ui.
-func resolveUIDir(flagDir string) (string, error) {
-	candidates := []string{flagDir, os.Getenv("PAVE_UI_DIR"), "ui"}
-	for _, c := range candidates {
-		if c == "" {
+// downloadUI fetches the pre-built standalone bundle for the given version and
+// extracts it into destDir.
+func downloadUI(destDir, ver string) error {
+	url := fmt.Sprintf(uiReleaseURL, ver, ver)
+	resp, err := http.Get(url) //nolint:noctx
+	if err != nil {
+		return fmt.Errorf("fetching %s: %w", url, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status %s from %s", resp.Status, url)
+	}
+
+	if err := os.MkdirAll(destDir, 0o755); err != nil {
+		return fmt.Errorf("creating %s: %w", destDir, err)
+	}
+
+	gr, err := gzip.NewReader(resp.Body)
+	if err != nil {
+		return fmt.Errorf("reading gzip stream: %w", err)
+	}
+	defer gr.Close()
+
+	tr := tar.NewReader(gr)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("reading tar: %w", err)
+		}
+
+		// Guard against path traversal.
+		target := filepath.Join(destDir, filepath.Clean("/"+hdr.Name))
+		if !filepath.IsAbs(target) {
 			continue
 		}
-		if info, err := os.Stat(filepath.Join(c, "package.json")); err == nil && !info.IsDir() {
-			return c, nil
+
+		switch hdr.Typeflag {
+		case tar.TypeDir:
+			if err := os.MkdirAll(target, 0o755); err != nil {
+				return err
+			}
+		case tar.TypeReg:
+			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+				return err
+			}
+			f, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.FileMode(hdr.Mode))
+			if err != nil {
+				return err
+			}
+			if _, err := io.Copy(f, tr); err != nil {
+				f.Close()
+				return err
+			}
+			f.Close()
 		}
 	}
-	return "", fmt.Errorf("could not find the ui/ directory; pass --ui-dir or set PAVE_UI_DIR")
+	return nil
+}
+
+// openBrowser launches the system browser for url using the platform command.
+func openBrowser(ctx context.Context, url string) error {
+	var name string
+	var args []string
+	switch runtime.GOOS {
+	case "darwin":
+		name = "open"
+		args = []string{url}
+	case "windows":
+		name = "cmd"
+		args = []string{"/C", "start", url}
+	default:
+		name = "xdg-open"
+		args = []string{url}
+	}
+	p, err := proc.Start(ctx, name, args, ".")
+	if err != nil {
+		return err
+	}
+	_, _ = p.Wait()
+	return nil
 }
 
 // uiEnv builds the environment that points the viewer at pave's database. For

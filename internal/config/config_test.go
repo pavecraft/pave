@@ -108,6 +108,36 @@ func TestLoadDefaultsRetriesWhenOmitted(t *testing.T) {
 	}
 }
 
+func TestUIDefaults(t *testing.T) {
+	t.Parallel()
+	path := writeConfig(t, "provider: claude\n")
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.UI.Path != ".pave/ui" {
+		t.Errorf("UI.Path = %q, want .pave/ui", cfg.UI.Path)
+	}
+	if cfg.UI.Port != 4000 {
+		t.Errorf("UI.Port = %d, want 4000", cfg.UI.Port)
+	}
+}
+
+func TestUIConfigOverride(t *testing.T) {
+	t.Parallel()
+	path := writeConfig(t, "ui:\n  path: /custom/ui\n  port: 8080\n")
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.UI.Path != "/custom/ui" {
+		t.Errorf("UI.Path = %q, want /custom/ui", cfg.UI.Path)
+	}
+	if cfg.UI.Port != 8080 {
+		t.Errorf("UI.Port = %d, want 8080", cfg.UI.Port)
+	}
+}
+
 func TestLoadMissingFile(t *testing.T) {
 	t.Parallel()
 	_, err := Load(filepath.Join(t.TempDir(), "nonexistent.yaml"))

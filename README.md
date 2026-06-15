@@ -74,7 +74,7 @@ A `FEATURES.md` entry looks like:
 | `pave status [--scan]` | Show implemented vs. pending. `--scan` refines from the codebase. |
 | `pave run [flags]` | Implement pending features (interactive). |
 | `pave limits` | Report rate-limit status and next reset. |
-| `pave ui` | Launch the local Next.js viewer (see `ui/`). |
+| `pave ui` | Launch the local viewer. Downloads automatically on first run. |
 
 ### `pave run` flags
 
@@ -126,6 +126,10 @@ limiter:
   window: 5h                     # rolling usage window length
   backoff_initial: 1m            # first backoff interval
   backoff_max: 5h                # cap on backoff
+
+ui:
+  path: .pave/ui                 # where the downloaded UI bundle is stored
+  port: 4000                     # port for the local viewer
 ```
 
 ### Database drivers
@@ -137,7 +141,35 @@ limiter:
 | `turso` | `libsql://your-db.turso.io` | Set `TURSO_AUTH_TOKEN` in the env. |
 
 The driver and DSN can be overridden with the `PAVE_DRIVER` and `PAVE_DSN`
-environment variables, which is how the `ui/` viewer points at the same data.
+environment variables; `pave ui` injects these automatically from `pave.yaml`.
+
+## UI
+
+pave ships a local web viewer you can start with:
+
+```sh
+pave ui
+```
+
+On first run, pave downloads the pre-built UI bundle matching your pave version
+and opens `http://localhost:4000` in your browser automatically. No Node.js or
+`npm install` required — the bundle is self-contained.
+
+The viewer connects to the same database configured in `pave.yaml`, so it always
+shows the live data from your current project. To change the port or storage
+location, edit `pave.yaml`:
+
+```yaml
+ui:
+  port: 4000      # default
+  path: .pave/ui  # default; the downloaded bundle is stored here
+```
+
+You can also override per-run:
+
+```sh
+pave ui --port 8080
+```
 
 ## How it works
 
