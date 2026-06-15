@@ -31,6 +31,7 @@ type Limiter struct {
 	Window         time.Duration `yaml:"window"`
 	BackoffInitial time.Duration `yaml:"backoff_initial"`
 	BackoffMax     time.Duration `yaml:"backoff_max"`
+	ResetBuffer    time.Duration `yaml:"reset_buffer"`
 }
 
 // UI configures the pave UI server launched by `pave ui`.
@@ -72,6 +73,7 @@ func Default() Config {
 			Window:         5 * time.Hour,
 			BackoffInitial: time.Minute,
 			BackoffMax:     5 * time.Hour,
+			ResetBuffer:    60 * time.Second,
 		},
 		UI: UI{
 			Port: 4000,
@@ -136,6 +138,9 @@ func (c *Config) applyDefaults() {
 	}
 	if c.Limiter.BackoffMax == 0 {
 		c.Limiter.BackoffMax = d.Limiter.BackoffMax
+	}
+	if c.Limiter.ResetBuffer == 0 {
+		c.Limiter.ResetBuffer = d.Limiter.ResetBuffer
 	}
 	if c.UI.Port == 0 {
 		c.UI.Port = d.UI.Port

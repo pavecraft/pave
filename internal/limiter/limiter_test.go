@@ -2,6 +2,7 @@ package limiter
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -43,7 +44,38 @@ func newStore(t *testing.T) state.Store {
 }
 
 func testCfg() config.Limiter {
-	return config.Limiter{Window: 5 * time.Hour, BackoffInitial: time.Minute, BackoffMax: time.Hour}
+	return config.Limiter{Window: 5 * time.Hour, BackoffInitial: time.Minute, BackoffMax: time.Hour, ResetBuffer: 60 * time.Second}
+}
+
+func TestObserveExplicitResetAppliesBuffer(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	st := newStore(t)
+
+	buf := 90 * time.Second
+	cfg := config.Limiter{
+		Window: 5 * time.Hour, BackoffInitial: time.Minute, BackoffMax: time.Hour,
+		ResetBuffer: buf,
+	}
+	l := New(ctx, st, "claude", cfg, nil)
+
+	// Build output containing a reset time 2 hours from now so ParseResetTime
+	// always returns a future time regardless of when the test runs.
+	loc, _ := time.LoadLocation("UTC")
+	explicit := time.Now().In(loc).Add(2 * time.Hour).Truncate(time.Minute)
+	outputMsg := fmt.Sprintf("claude.ai usage limit reached. Resets %s (UTC).", explicit.Format("3:04pm"))
+
+	l.Observe(provider.Result{Success: false, Stderr: outputMsg}, nil)
+
+	active, resetAt, _ := l.Status()
+	if !active {
+		t.Fatal("expected active window after explicit limit message")
+	}
+	// resetAt must be at least buf ahead of explicit (may be slightly more due
+	// to sub-minute truncation in ParseResetTime; check the lower bound only).
+	if resetAt.Before(explicit.Add(buf)) {
+		t.Errorf("resetAt = %v, want >= explicit+buffer (%v)", resetAt, explicit.Add(buf))
+	}
 }
 
 func TestObserveSetsAndClearsWindow(t *testing.T) {
