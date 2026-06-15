@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
+	"log/slog"
 	"os"
 	"os/signal"
 	"strings"
@@ -132,17 +134,7 @@ func runRun(cmd *cobra.Command, configPath string, opts runOptions) error {
 	fmt.Fprintln(out, interactive.Hint)
 	fmt.Fprintln(out)
 
-	// Build the feature ID list for the progress renderer, deduplicating
-	// defensively in case prior state produced repeated IDs.
-	seen := make(map[string]bool, len(rows))
-	featureIDs := make([]string, 0, len(rows))
-	for _, r := range rows {
-		if r.Status != project.StatusImplemented && !seen[r.ID] {
-			seen[r.ID] = true
-			featureIDs = append(featureIDs, r.ID)
-		}
-	}
-	prog := tui.New(out, featureIDs, isATTY)
+	prog := tui.New(out, isATTY)
 
 	eng := &planner.Engine{
 		Store:    st,
@@ -152,6 +144,9 @@ func runRun(cmd *cobra.Command, configPath string, opts runOptions) error {
 		Events:   events,
 		Out:      out,
 		Progress: prog,
+		// Discard slog output: all events are persisted to the DB via AppendLogLine
+		// and slog lines written to stderr would interleave with the TUI spinner.
+		Log: slog.New(slog.NewTextHandler(io.Discard, nil)),
 	}
 
 	sum, perr := eng.Process(ctx, run, rows)
