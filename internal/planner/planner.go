@@ -42,6 +42,14 @@ type Progress interface {
 	FeatureFinished(id string, status project.Status)
 	FeatureSkipped(id string)
 	FeatureRetry(id string, attempt int)
+	// FeatureTail delivers the last line of provider output while a feature is
+	// running. It is called periodically and may be called with an empty line.
+	FeatureTail(id string, line string)
+}
+
+// outputTailer is optionally implemented by Controls to expose live output.
+type outputTailer interface {
+	LastOutput() string
 }
 
 // Engine runs features for a single run.
@@ -233,8 +241,19 @@ func (e *Engine) executeAttempt(ctx context.Context, run state.Run, f state.Feat
 	// Phase 2: event loop with controls available.
 	events := e.Events
 	status := attemptNormal
+
+	// Poll provider output every 200ms for live tail display.
+	tailTicker := time.NewTicker(200 * time.Millisecond)
+	defer tailTicker.Stop()
+	tailer, _ := controls.(outputTailer)
+
 	for {
 		select {
+		case <-tailTicker.C:
+			if tailer != nil {
+				e.notifyTail(f.ID, tailer.LastOutput())
+			}
+
 		case ev, ok := <-events:
 			if !ok {
 				events = nil // channel closed; stop selecting on it
@@ -378,6 +397,12 @@ func (e *Engine) notifyRetry(id string, attempt int) {
 		e.Progress.FeatureRetry(id, attempt)
 	} else {
 		e.print("  >  %s (retry %d)\n", id, attempt)
+	}
+}
+
+func (e *Engine) notifyTail(id, line string) {
+	if e.Progress != nil {
+		e.Progress.FeatureTail(id, line)
 	}
 }
 

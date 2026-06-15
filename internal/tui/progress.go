@@ -4,11 +4,14 @@ package tui
 import (
 	"fmt"
 	"io"
+	"regexp"
 	"sync"
 	"time"
 
 	"github.com/pavecraft/pave/internal/project"
 )
+
+var ansiStripper = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
 
 var spinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 
@@ -29,6 +32,7 @@ type Progress struct {
 	ansi        bool
 	activeID    string
 	activeRetry int
+	activeTail  string
 	total       int
 	done        int
 	frame       int
@@ -70,6 +74,7 @@ func (p *Progress) FeatureFinished(id string, status project.Status) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.activeID = ""
+	p.activeTail = ""
 	p.done++
 	if p.ansi {
 		switch status {
@@ -104,6 +109,19 @@ func (p *Progress) FeatureSkipped(id string) {
 	}
 }
 
+// FeatureTail updates the live output tail shown next to the spinner.
+func (p *Progress) FeatureTail(id string, line string) {
+	if !p.ansi {
+		return
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.activeID != id {
+		return
+	}
+	p.activeTail = truncateTail(line)
+}
+
 // FeatureRetry records the retry attempt number; the animator picks it up.
 func (p *Progress) FeatureRetry(id string, attempt int) {
 	p.mu.Lock()
@@ -125,7 +143,18 @@ func (p *Progress) Stop() {
 		// Flush the active line as pending (run was interrupted mid-feature).
 		fmt.Fprintf(p.out, "%s  %s-%s  %s%s%s\n", ansiEraseLine, ansiDim, ansiReset, ansiDim, p.activeID, ansiReset)
 		p.activeID = ""
+		p.activeTail = ""
 	}
+}
+
+// truncateTail strips ANSI codes from line and truncates to 60 runes.
+func truncateTail(line string) string {
+	line = ansiStripper.ReplaceAllString(line, "")
+	runes := []rune(line)
+	if len(runes) > 60 {
+		return string(runes[:57]) + "…"
+	}
+	return line
 }
 
 // counter returns the "(done/total)" string. Must be called with p.mu held.
@@ -148,15 +177,18 @@ func (p *Progress) animate() {
 			if p.ansi && p.activeID != "" {
 				spin := spinnerFrames[p.frame]
 				counter := p.counter()
+				tail := p.activeTail
+				suffix := fmt.Sprintf("%s%s%s", ansiDim, counter, ansiReset)
+				if tail != "" {
+					suffix += fmt.Sprintf("  %s· %s%s", ansiDim, tail, ansiReset)
+				}
 				if p.activeRetry > 0 {
-					fmt.Fprintf(p.out, "%s  %s%s%s  %s %s(retry %d)%s  %s%s%s",
+					fmt.Fprintf(p.out, "%s  %s%s%s  %s %s(retry %d)%s  %s",
 						ansiEraseLine, ansiCyan, spin, ansiReset, p.activeID,
-						ansiDim, p.activeRetry, ansiReset,
-						ansiDim, counter, ansiReset)
+						ansiDim, p.activeRetry, ansiReset, suffix)
 				} else {
-					fmt.Fprintf(p.out, "%s  %s%s%s  %s  %s%s%s",
-						ansiEraseLine, ansiCyan, spin, ansiReset, p.activeID,
-						ansiDim, counter, ansiReset)
+					fmt.Fprintf(p.out, "%s  %s%s%s  %s  %s",
+						ansiEraseLine, ansiCyan, spin, ansiReset, p.activeID, suffix)
 				}
 			}
 			p.mu.Unlock()

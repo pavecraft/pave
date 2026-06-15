@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 	"time"
 )
@@ -190,6 +191,22 @@ func (p *Process) StdoutString() string { return p.stdout.String() }
 
 // StderrString returns the captured standard error as a string.
 func (p *Process) StderrString() string { return p.stderr.String() }
+
+// LastOutput returns the last non-empty line from stdout or stderr, whichever
+// appeared most recently. Useful for live progress display.
+func (p *Process) LastOutput() string {
+	combined := p.stdout.String() + p.stderr.String()
+	// Walk backwards to find the last non-empty line.
+	start := len(combined)
+	for start > 0 && (combined[start-1] == '\n' || combined[start-1] == '\r') {
+		start--
+	}
+	end := start
+	for start > 0 && combined[start-1] != '\n' {
+		start--
+	}
+	return strings.TrimSpace(combined[start:end])
+}
 
 // exitCodeFrom extracts an exit code from a cmd.Wait error.
 func exitCodeFrom(err error) int {

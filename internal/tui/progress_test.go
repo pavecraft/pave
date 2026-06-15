@@ -103,6 +103,54 @@ func TestProgressEmptyRun(t *testing.T) {
 	p.Stop() // must not panic or deadlock
 }
 
+func TestProgressTail(t *testing.T) {
+	t.Parallel()
+	var buf bytes.Buffer
+	p := New(&buf, true, 1)
+	p.FeatureStarted("feat-a")
+
+	p.FeatureTail("feat-a", "Writing src/index.ts")
+	p.mu.Lock()
+	if p.activeTail != "Writing src/index.ts" {
+		t.Errorf("activeTail = %q, want %q", p.activeTail, "Writing src/index.ts")
+	}
+	p.mu.Unlock()
+
+	// Tail for a different ID should be ignored.
+	p.FeatureTail("feat-other", "should be ignored")
+	p.mu.Lock()
+	if p.activeTail != "Writing src/index.ts" {
+		t.Errorf("activeTail changed on wrong ID: %q", p.activeTail)
+	}
+	p.mu.Unlock()
+
+	// Finishing clears the tail.
+	p.FeatureFinished("feat-a", project.StatusImplemented)
+	p.mu.Lock()
+	if p.activeTail != "" {
+		t.Errorf("activeTail not cleared after finish: %q", p.activeTail)
+	}
+	p.mu.Unlock()
+	p.Stop()
+}
+
+func TestTruncateTail(t *testing.T) {
+	t.Parallel()
+	long := strings.Repeat("x", 70)
+	got := truncateTail(long)
+	if len([]rune(got)) > 60 {
+		t.Errorf("truncateTail did not truncate: len=%d", len([]rune(got)))
+	}
+	if !strings.HasSuffix(got, "…") {
+		t.Error("truncateTail missing ellipsis")
+	}
+	// ANSI codes should be stripped.
+	ansi := "\033[32mhello\033[0m"
+	if got := truncateTail(ansi); got != "hello" {
+		t.Errorf("truncateTail(%q) = %q, want %q", ansi, got, "hello")
+	}
+}
+
 func TestProgressCounter(t *testing.T) {
 	t.Parallel()
 	var buf bytes.Buffer
