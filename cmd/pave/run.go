@@ -132,10 +132,13 @@ func runRun(cmd *cobra.Command, configPath string, opts runOptions) error {
 	fmt.Fprintln(out, interactive.Hint)
 	fmt.Fprintln(out)
 
-	// Build the feature ID list for the progress renderer.
+	// Build the feature ID list for the progress renderer, deduplicating
+	// defensively in case prior state produced repeated IDs.
+	seen := make(map[string]bool, len(rows))
 	featureIDs := make([]string, 0, len(rows))
 	for _, r := range rows {
-		if r.Status != project.StatusImplemented {
+		if r.Status != project.StatusImplemented && !seen[r.ID] {
+			seen[r.ID] = true
 			featureIDs = append(featureIDs, r.ID)
 		}
 	}
