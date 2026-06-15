@@ -41,6 +41,9 @@ func (s *Server) listRuns(w http.ResponseWriter, r *http.Request) {
 		handleStoreError(w, err)
 		return
 	}
+	if runs == nil {
+		runs = []state.Run{}
+	}
 	writeJSON(w, http.StatusOK, runs)
 }
 
@@ -59,6 +62,9 @@ func (s *Server) listFeatures(w http.ResponseWriter, r *http.Request) {
 		handleStoreError(w, err)
 		return
 	}
+	if features == nil {
+		features = []state.FeatureRow{}
+	}
 	writeJSON(w, http.StatusOK, features)
 }
 
@@ -67,6 +73,9 @@ func (s *Server) listAttempts(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		handleStoreError(w, err)
 		return
+	}
+	if attempts == nil {
+		attempts = []state.Attempt{}
 	}
 	writeJSON(w, http.StatusOK, attempts)
 }
@@ -85,6 +94,9 @@ func (s *Server) featureHistory(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		handleStoreError(w, err)
 		return
+	}
+	if rows == nil {
+		rows = []state.FeatureHistoryRow{}
 	}
 	writeJSON(w, http.StatusOK, rows)
 }
