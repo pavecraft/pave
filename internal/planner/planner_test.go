@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xoai/pave/internal/config"
-	"github.com/xoai/pave/internal/interactive"
-	"github.com/xoai/pave/internal/project"
-	"github.com/xoai/pave/internal/provider"
-	"github.com/xoai/pave/internal/state"
+	"github.com/pavecraft/pave/internal/config"
+	"github.com/pavecraft/pave/internal/interactive"
+	"github.com/pavecraft/pave/internal/project"
+	"github.com/pavecraft/pave/internal/provider"
+	"github.com/pavecraft/pave/internal/state"
 )
 
 // --- mocks ---

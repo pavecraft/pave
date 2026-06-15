@@ -1,4 +1,4 @@
-module github.com/xoai/pave
+module github.com/pavecraft/pave
 
 go 1.26.4
 

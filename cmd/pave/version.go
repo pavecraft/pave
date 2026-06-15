@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/xoai/pave/internal/config"
+	"github.com/pavecraft/pave/internal/config"
 )
 
 // version is overridden at build time: -ldflags "-X main.version=v1.2.3"

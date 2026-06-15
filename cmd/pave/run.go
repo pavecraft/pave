@@ -14,14 +14,14 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
-	"github.com/xoai/pave/internal/config"
-	"github.com/xoai/pave/internal/interactive"
-	"github.com/xoai/pave/internal/limiter"
-	"github.com/xoai/pave/internal/planner"
-	"github.com/xoai/pave/internal/project"
-	"github.com/xoai/pave/internal/provider"
-	"github.com/xoai/pave/internal/state"
-	"github.com/xoai/pave/internal/tui"
+	"github.com/pavecraft/pave/internal/config"
+	"github.com/pavecraft/pave/internal/interactive"
+	"github.com/pavecraft/pave/internal/limiter"
+	"github.com/pavecraft/pave/internal/planner"
+	"github.com/pavecraft/pave/internal/project"
+	"github.com/pavecraft/pave/internal/provider"
+	"github.com/pavecraft/pave/internal/state"
+	"github.com/pavecraft/pave/internal/tui"
 )
 
 func newRunCmd() *cobra.Command {

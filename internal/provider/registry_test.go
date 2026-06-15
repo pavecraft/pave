@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/xoai/pave/internal/project"
+	"github.com/pavecraft/pave/internal/project"
 )
 
 var (

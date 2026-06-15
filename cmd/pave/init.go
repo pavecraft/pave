@@ -6,9 +6,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/xoai/pave/internal/config"
-	"github.com/xoai/pave/internal/scaffold"
-	"github.com/xoai/pave/internal/state"
+	"github.com/pavecraft/pave/internal/config"
+	"github.com/pavecraft/pave/internal/scaffold"
+	"github.com/pavecraft/pave/internal/state"
 )
 
 func newInitCmd() *cobra.Command {

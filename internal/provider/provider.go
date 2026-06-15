@@ -7,7 +7,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/xoai/pave/internal/project"
+	"github.com/pavecraft/pave/internal/project"
 )
 
 // Controls is the subset of subprocess lifecycle operations the planner uses to

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xoai/pave/internal/project"
+	"github.com/pavecraft/pave/internal/project"
 )
 
 // newTestStore returns an in-memory SQLite store for contract testing.

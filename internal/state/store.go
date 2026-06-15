@@ -8,7 +8,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/xoai/pave/internal/project"
+	"github.com/pavecraft/pave/internal/project"
 )
 
 // RunStatus is the lifecycle state of a single `pave run` invocation.
