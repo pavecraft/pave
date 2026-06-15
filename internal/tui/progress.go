@@ -13,13 +13,14 @@ import (
 var spinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 
 const (
-	ansiReset = "\033[0m"
-	ansiGreen = "\033[32m"
-	ansiRed   = "\033[31m"
-	ansiCyan  = "\033[36m"
-	ansiDim   = "\033[2m"
-	ansiUp    = "\033[%dA"  // move cursor up N lines (stays on same column)
-	ansiClear = "\r\033[2K" // carriage return + erase entire line → always at col 0
+	ansiReset     = "\033[0m"
+	ansiGreen     = "\033[32m"
+	ansiRed       = "\033[31m"
+	ansiCyan      = "\033[36m"
+	ansiDim       = "\033[2m"
+	ansiUp        = "\033[%dA"  // move cursor up N lines (stays on same column)
+	ansiClear     = "\r\033[2K" // carriage return + erase entire line → always at col 0
+	ansiEraseDown = "\033[J"    // erase from cursor to end of display
 )
 
 type rowState int
@@ -155,6 +156,7 @@ func (p *Progress) animate() {
 func (p *Progress) printAll(redraw bool) {
 	if redraw && p.ansi && len(p.rows) > 0 {
 		fmt.Fprintf(p.out, ansiUp, len(p.rows))
+		fmt.Fprint(p.out, ansiEraseDown)
 	}
 	for _, r := range p.rows {
 		line := p.formatRow(r)
