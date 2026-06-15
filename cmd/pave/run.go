@@ -134,7 +134,13 @@ func runRun(cmd *cobra.Command, configPath string, opts runOptions) error {
 	fmt.Fprintln(out, interactive.Hint)
 	fmt.Fprintln(out)
 
-	prog := tui.New(out, isATTY)
+	total := 0
+	for _, r := range rows {
+		if r.Status != project.StatusImplemented {
+			total++
+		}
+	}
+	prog := tui.New(out, isATTY, total)
 
 	eng := &planner.Engine{
 		Store:    st,

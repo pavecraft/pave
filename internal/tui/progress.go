@@ -29,6 +29,8 @@ type Progress struct {
 	ansi        bool
 	activeID    string
 	activeRetry int
+	total       int
+	done        int
 	frame       int
 
 	mu     sync.Mutex
@@ -36,12 +38,14 @@ type Progress struct {
 	doneCh chan struct{}
 }
 
-// New creates a Progress renderer. Set ansi=true when out is a real terminal.
+// New creates a Progress renderer. total is the number of features to process
+// (used for the progress counter). Set ansi=true when out is a real terminal.
 // Call Stop when the run finishes.
-func New(out io.Writer, ansi bool) *Progress {
+func New(out io.Writer, ansi bool, total int) *Progress {
 	p := &Progress{
 		out:    out,
 		ansi:   ansi,
+		total:  total,
 		stopCh: make(chan struct{}),
 		doneCh: make(chan struct{}),
 	}
@@ -66,6 +70,7 @@ func (p *Progress) FeatureFinished(id string, status project.Status) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.activeID = ""
+	p.done++
 	if p.ansi {
 		switch status {
 		case project.StatusImplemented:
@@ -91,6 +96,7 @@ func (p *Progress) FeatureFinished(id string, status project.Status) {
 func (p *Progress) FeatureSkipped(id string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	p.done++
 	if p.ansi {
 		fmt.Fprintf(p.out, "  %s-%s  %s%s%s\n", ansiDim, ansiReset, ansiDim, id, ansiReset)
 	} else {
@@ -122,6 +128,14 @@ func (p *Progress) Stop() {
 	}
 }
 
+// counter returns the "(done/total)" string. Must be called with p.mu held.
+func (p *Progress) counter() string {
+	if p.total <= 0 {
+		return ""
+	}
+	return fmt.Sprintf("(%d/%d)", p.done+1, p.total)
+}
+
 func (p *Progress) animate() {
 	defer close(p.doneCh)
 	ticker := time.NewTicker(80 * time.Millisecond)
@@ -133,13 +147,16 @@ func (p *Progress) animate() {
 			p.frame = (p.frame + 1) % len(spinnerFrames)
 			if p.ansi && p.activeID != "" {
 				spin := spinnerFrames[p.frame]
+				counter := p.counter()
 				if p.activeRetry > 0 {
-					fmt.Fprintf(p.out, "%s  %s%s%s  %s %s(retry %d)%s",
+					fmt.Fprintf(p.out, "%s  %s%s%s  %s %s(retry %d)%s  %s%s%s",
 						ansiEraseLine, ansiCyan, spin, ansiReset, p.activeID,
-						ansiDim, p.activeRetry, ansiReset)
+						ansiDim, p.activeRetry, ansiReset,
+						ansiDim, counter, ansiReset)
 				} else {
-					fmt.Fprintf(p.out, "%s  %s%s%s  %s",
-						ansiEraseLine, ansiCyan, spin, ansiReset, p.activeID)
+					fmt.Fprintf(p.out, "%s  %s%s%s  %s  %s%s%s",
+						ansiEraseLine, ansiCyan, spin, ansiReset, p.activeID,
+						ansiDim, counter, ansiReset)
 				}
 			}
 			p.mu.Unlock()

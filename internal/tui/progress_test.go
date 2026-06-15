@@ -12,7 +12,7 @@ import (
 func TestProgressLifecycle(t *testing.T) {
 	t.Parallel()
 	var buf bytes.Buffer
-	p := New(&buf, false) // plain text: no ANSI, no redraw
+	p := New(&buf, false, 0) // plain text: no ANSI, no redraw
 
 	p.FeatureStarted("feat-a")
 	p.FeatureFinished("feat-a", project.StatusImplemented)
@@ -38,7 +38,7 @@ func TestProgressLifecycle(t *testing.T) {
 func TestProgressNonTTY(t *testing.T) {
 	t.Parallel()
 	var buf bytes.Buffer
-	p := New(&buf, false)
+	p := New(&buf, false, 0)
 
 	p.FeatureStarted("feat-a")
 	p.FeatureFinished("feat-a", project.StatusImplemented)
@@ -60,7 +60,7 @@ func TestProgressNonTTY(t *testing.T) {
 func TestProgressRetry(t *testing.T) {
 	t.Parallel()
 	var buf bytes.Buffer
-	p := New(&buf, false)
+	p := New(&buf, false, 0)
 
 	p.FeatureStarted("feat-a")
 	p.FeatureRetry("feat-a", 2)
@@ -75,7 +75,7 @@ func TestProgressRetry(t *testing.T) {
 func TestProgressANSIDoesNotPanic(t *testing.T) {
 	t.Parallel()
 	var buf bytes.Buffer
-	p := New(&buf, true)
+	p := New(&buf, true, 0)
 	p.FeatureStarted("feat-x")
 	time.Sleep(200 * time.Millisecond) // let the spinner tick a few times
 	p.FeatureFinished("feat-x", project.StatusImplemented)
@@ -89,7 +89,7 @@ func TestProgressANSIDoesNotPanic(t *testing.T) {
 func TestProgressStopWithActiveFeature(t *testing.T) {
 	t.Parallel()
 	var buf bytes.Buffer
-	p := New(&buf, false)
+	p := New(&buf, false, 0)
 	p.FeatureStarted("feat-interrupted")
 	// Stop without calling FeatureFinished — simulates mid-run interruption.
 	p.Stop()
@@ -99,6 +99,35 @@ func TestProgressStopWithActiveFeature(t *testing.T) {
 func TestProgressEmptyRun(t *testing.T) {
 	t.Parallel()
 	var buf bytes.Buffer
-	p := New(&buf, false)
+	p := New(&buf, false, 0)
 	p.Stop() // must not panic or deadlock
+}
+
+func TestProgressCounter(t *testing.T) {
+	t.Parallel()
+	var buf bytes.Buffer
+	p := New(&buf, true, 3) // 3 total features
+
+	// First feature: counter should show (1/3)
+	if got := p.counter(); got != "(1/3)" {
+		t.Errorf("counter before any done = %q, want (1/3)", got)
+	}
+
+	p.FeatureFinished("feat-a", project.StatusImplemented)
+
+	p.mu.Lock()
+	if got := p.counter(); got != "(2/3)" {
+		t.Errorf("counter after 1 done = %q, want (2/3)", got)
+	}
+	p.mu.Unlock()
+
+	p.FeatureSkipped("feat-b")
+
+	p.mu.Lock()
+	if got := p.counter(); got != "(3/3)" {
+		t.Errorf("counter after 2 done = %q, want (3/3)", got)
+	}
+	p.mu.Unlock()
+
+	p.Stop()
 }
