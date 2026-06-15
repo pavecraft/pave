@@ -100,12 +100,40 @@ func (m *mockStore) Close() error { return nil }
 // minimalFS returns a tiny fs.FS with just an index.html for static serving tests.
 func minimalFS() fs.FS {
 	return fstest.MapFS{
-		"index.html": &fstest.MapFile{Data: []byte("<html>pave</html>")},
+		"index.html":        &fstest.MapFile{Data: []byte("<html>pave</html>")},
+		"assets/index.js":   &fstest.MapFile{Data: []byte("console.log('pave')")},
+		"assets/index.css":  &fstest.MapFile{Data: []byte("body{}")},
 	}
 }
 
 func newTestServer(store state.Store) http.Handler {
 	return NewServer(store, minimalFS())
+}
+
+func TestListRunsEmpty(t *testing.T) {
+	t.Parallel()
+	srv := newTestServer(&mockStore{})
+
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest("GET", "/api/runs", nil))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	if ct := rec.Header().Get("Content-Type"); ct != "application/json" {
+		t.Errorf("Content-Type = %q, want application/json", ct)
+	}
+	body := strings.TrimSpace(rec.Body.String())
+	if body == "null" {
+		t.Fatal("body is null; want []")
+	}
+	var runs []state.Run
+	if err := json.Unmarshal(rec.Body.Bytes(), &runs); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if runs == nil || len(runs) != 0 {
+		t.Errorf("expected empty slice, got %v", runs)
+	}
 }
 
 func TestListRuns(t *testing.T) {
@@ -128,6 +156,29 @@ func TestListRuns(t *testing.T) {
 	}
 	if len(runs) != 1 || runs[0].ID != "r1" {
 		t.Errorf("runs = %+v", runs)
+	}
+}
+
+func TestListRunsLimit(t *testing.T) {
+	t.Parallel()
+	now := time.Now()
+	store := &mockStore{runs: []state.Run{
+		{ID: "r1", StartedAt: now, Status: state.RunCompleted},
+		{ID: "r2", StartedAt: now, Status: state.RunCompleted},
+		{ID: "r3", StartedAt: now, Status: state.RunCompleted},
+	}}
+	srv := newTestServer(store)
+
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest("GET", "/api/runs?limit=2", nil))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	var runs []state.Run
+	json.Unmarshal(rec.Body.Bytes(), &runs)
+	if len(runs) != 2 {
+		t.Errorf("expected 2 runs with limit=2, got %d", len(runs))
 	}
 }
 
@@ -178,6 +229,27 @@ func TestListFeatures(t *testing.T) {
 	}
 }
 
+func TestListFeaturesEmpty(t *testing.T) {
+	t.Parallel()
+	srv := newTestServer(&mockStore{})
+
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest("GET", "/api/runs/no-such-run/features", nil))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	body := strings.TrimSpace(rec.Body.String())
+	if body == "null" {
+		t.Fatal("body is null; want []")
+	}
+	var features []state.FeatureRow
+	json.Unmarshal(rec.Body.Bytes(), &features)
+	if len(features) != 0 {
+		t.Errorf("expected empty slice, got %v", features)
+	}
+}
+
 func TestListAttempts(t *testing.T) {
 	t.Parallel()
 	store := &mockStore{attempts: []state.Attempt{
@@ -195,6 +267,27 @@ func TestListAttempts(t *testing.T) {
 	json.Unmarshal(rec.Body.Bytes(), &attempts)
 	if len(attempts) != 1 || attempts[0].ID != "a1" {
 		t.Errorf("attempts = %+v", attempts)
+	}
+}
+
+func TestListAttemptsEmpty(t *testing.T) {
+	t.Parallel()
+	srv := newTestServer(&mockStore{})
+
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest("GET", "/api/runs/no-such-run/attempts", nil))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	body := strings.TrimSpace(rec.Body.String())
+	if body == "null" {
+		t.Fatal("body is null; want []")
+	}
+	var attempts []state.Attempt
+	json.Unmarshal(rec.Body.Bytes(), &attempts)
+	if len(attempts) != 0 {
+		t.Errorf("expected empty slice, got %v", attempts)
 	}
 }
 
@@ -218,6 +311,27 @@ func TestGetAttempt(t *testing.T) {
 	}
 }
 
+func TestFeatureHistoryEmpty(t *testing.T) {
+	t.Parallel()
+	srv := newTestServer(&mockStore{})
+
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest("GET", "/api/features/history", nil))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	body := strings.TrimSpace(rec.Body.String())
+	if body == "null" {
+		t.Fatal("body is null; want []")
+	}
+	var rows []state.FeatureHistoryRow
+	json.Unmarshal(rec.Body.Bytes(), &rows)
+	if len(rows) != 0 {
+		t.Errorf("expected empty slice, got %v", rows)
+	}
+}
+
 func TestFeatureHistory(t *testing.T) {
 	t.Parallel()
 	store := &mockStore{featureHistory: []state.FeatureHistoryRow{
@@ -235,6 +349,62 @@ func TestFeatureHistory(t *testing.T) {
 	json.Unmarshal(rec.Body.Bytes(), &rows)
 	if len(rows) != 1 || rows[0].FeatureID != "f1" {
 		t.Errorf("rows = %+v", rows)
+	}
+}
+
+func TestSSEStreamUnknownRun(t *testing.T) {
+	t.Parallel()
+	srv := newTestServer(&mockStore{})
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/runs/no-such-run/stream", nil)
+	ctx, cancel := context.WithTimeout(req.Context(), time.Second)
+	defer cancel()
+	srv.ServeHTTP(rec, req.WithContext(ctx))
+
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want 404 for unknown run", rec.Code)
+	}
+}
+
+func TestContentTypeJSON(t *testing.T) {
+	t.Parallel()
+	now := time.Now()
+	store := &mockStore{runs: []state.Run{
+		{ID: "r1", StartedAt: now, Status: state.RunCompleted},
+	}}
+	srv := newTestServer(store)
+
+	endpoints := []string{
+		"/api/runs",
+		"/api/runs/r1",
+		"/api/runs/r1/features",
+		"/api/runs/r1/attempts",
+		"/api/attempts/missing",
+		"/api/features/history",
+	}
+	for _, path := range endpoints {
+		rec := httptest.NewRecorder()
+		srv.ServeHTTP(rec, httptest.NewRequest("GET", path, nil))
+		ct := rec.Header().Get("Content-Type")
+		if ct != "application/json" {
+			t.Errorf("GET %s: Content-Type = %q, want application/json", path, ct)
+		}
+	}
+}
+
+func TestStaticAssetServed(t *testing.T) {
+	t.Parallel()
+	srv := newTestServer(&mockStore{})
+
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest("GET", "/assets/index.js", nil))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 for known asset", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "pave") {
+		t.Errorf("expected JS asset content, got: %q", rec.Body.String())
 	}
 }
 

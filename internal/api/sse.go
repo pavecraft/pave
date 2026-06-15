@@ -16,6 +16,11 @@ import (
 func (s *Server) streamLogs(w http.ResponseWriter, r *http.Request) {
 	runID := r.PathValue("id")
 
+	if _, err := s.store.GetRun(r.Context(), runID); err != nil {
+		handleStoreError(w, err)
+		return
+	}
+
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		http.Error(w, "streaming not supported", http.StatusInternalServerError)
