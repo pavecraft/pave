@@ -7,8 +7,9 @@ import (
 	"path/filepath"
 )
 
-// DefaultConfigYAML is the starter pave.yaml content written to .pave/pave.yaml.
-const DefaultConfigYAML = `# pave configuration. See README.md for the full reference.
+// configYAMLTemplate is the starter pave.yaml template; %s is replaced with the
+// pave binary version so ui.version is pinned at init time.
+const configYAMLTemplate = `# pave configuration. See README.md for the full reference.
 
 project_path: .                  # target project root
 features_file: ./FEATURES.md    # feature spec (kept in project root for visibility)
@@ -31,7 +32,7 @@ limiter:
 ui:
   path: ".pave/ui"             # directory where the UI assets are stored
   port: 4000                   # port for the local UI server
-  version: ""                  # UI release to download; empty = same version as pave binary
+  version: "%s"                # UI release to download; must match pave binary version
 `
 
 // DefaultFeaturesMD is the starter FEATURES.md content.
@@ -57,11 +58,10 @@ type Result struct {
 	FeaturesCreated bool
 }
 
-// Init scaffolds .pave/pave.yaml and FEATURES.md under dir. The config and
-// database live inside .pave/ so the whole directory can be gitignored. The
-// FEATURES.md is placed in dir itself so it remains visible in the project.
+// Init scaffolds .pave/pave.yaml and FEATURES.md under dir. paveVersion is
+// stamped into ui.version so the UI download is pinned to the same release.
 // Neither file is overwritten if it already exists.
-func Init(dir string) (Result, error) {
+func Init(dir, paveVersion string) (Result, error) {
 	paveDir := filepath.Join(dir, ".pave")
 	if err := os.MkdirAll(paveDir, 0o755); err != nil {
 		return Result{}, fmt.Errorf("creating .pave directory: %w", err)
@@ -73,7 +73,7 @@ func Init(dir string) (Result, error) {
 		FeaturesPath: filepath.Join(dir, "FEATURES.md"),
 	}
 
-	created, err := writeIfAbsent(res.ConfigPath, DefaultConfigYAML)
+	created, err := writeIfAbsent(res.ConfigPath, fmt.Sprintf(configYAMLTemplate, paveVersion))
 	if err != nil {
 		return res, err
 	}

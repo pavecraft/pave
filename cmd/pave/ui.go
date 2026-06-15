@@ -65,7 +65,7 @@ func runUI(cmd *cobra.Command, configPath, uiDirFlag string, portFlag int) error
 	if uiVersion == "" {
 		uiVersion = version
 	}
-	if _, err := os.Stat(filepath.Join(uiDir, "server.js")); err != nil {
+	if info, err := os.Stat(uiDir); err != nil || !info.IsDir() {
 		fmt.Fprintf(cmd.OutOrStdout(), "Downloading pave UI %s...\n", uiVersion)
 		if err := downloadUI(uiDir, uiVersion); err != nil {
 			return fmt.Errorf("downloading UI: %w", err)
