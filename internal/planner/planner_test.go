@@ -103,8 +103,9 @@ func engine(st state.Store, p provider.Provider, ev <-chan interactive.Event) *E
 		Store:    st,
 		Provider: p,
 		Limiter:  NopLimiter{},
-		Cfg:      config.Config{ProjectPath: ".", MaxRetries: 1, TaskTimeout: 0},
-		Events:   ev,
+		// Retry.BackoffInitial/Max left as zero so retries fire immediately in tests.
+		Cfg:    config.Config{ProjectPath: ".", MaxRetries: 1, TaskTimeout: 0},
+		Events: ev,
 	}
 }
 
@@ -274,6 +275,62 @@ func TestProcessQuitLeavesPending(t *testing.T) {
 	}
 	if p.controls == nil || atomic.LoadInt32(&p.controls.stops) == 0 {
 		t.Error("expected Stop to be called on quit")
+	}
+}
+
+func TestRetryBackoff(t *testing.T) {
+	t.Parallel()
+	initial := 30 * time.Second
+	max := 10 * time.Minute
+	cases := []struct {
+		attempt int
+		want    time.Duration
+	}{
+		{1, 30 * time.Second},
+		{2, 60 * time.Second},
+		{3, 120 * time.Second},
+		{7, max}, // would overflow; capped
+	}
+	for _, tc := range cases {
+		got := retryBackoff(initial, max, tc.attempt)
+		if got != tc.want {
+			t.Errorf("retryBackoff(attempt=%d) = %s, want %s", tc.attempt, got, tc.want)
+		}
+	}
+}
+
+func TestProcessFailTwiceThenSucceed(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	st := newStore(t)
+	run := seed(t, st, "r1", state.FeatureRow{ID: "f1", Title: "One", Status: project.StatusPending})
+
+	p := &mockProvider{name: "claude", results: []provider.Result{
+		{Success: false, RawExit: 1},
+		{Success: false, RawExit: 1},
+		{Success: true, RawExit: 0},
+	}}
+	rows, _ := st.ListFeatures(ctx, "r1")
+
+	eng := &Engine{
+		Store:    st,
+		Provider: p,
+		Limiter:  NopLimiter{},
+		Cfg:      config.Config{ProjectPath: ".", MaxRetries: 2, TaskTimeout: 0},
+	}
+	sum, err := eng.Process(ctx, run, rows)
+	if err != nil {
+		t.Fatalf("Process: %v", err)
+	}
+	if sum.Implemented != 1 {
+		t.Errorf("summary = %+v, want 1 implemented", sum)
+	}
+	if got := atomic.LoadInt32(&p.runs); got != 3 {
+		t.Errorf("provider runs = %d, want 3", got)
+	}
+	got, _ := st.GetFeature(ctx, "r1", "f1")
+	if got.Status != project.StatusImplemented {
+		t.Errorf("status = %q, want implemented", got.Status)
 	}
 }
 

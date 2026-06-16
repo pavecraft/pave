@@ -26,6 +26,12 @@ type Database struct {
 	DSN    string `yaml:"dsn"`
 }
 
+// Retry configures backoff between non-limit failure retries.
+type Retry struct {
+	BackoffInitial time.Duration `yaml:"backoff_initial"`
+	BackoffMax     time.Duration `yaml:"backoff_max"`
+}
+
 // Limiter configures rate-limit backoff behavior.
 type Limiter struct {
 	Window         time.Duration `yaml:"window"`
@@ -50,6 +56,7 @@ type Config struct {
 	TaskTimeout      time.Duration `yaml:"task_timeout"`
 	AutoCommit       bool          `yaml:"auto_commit"`
 	MaxRetries       int           `yaml:"max_retries"`
+	Retry            Retry         `yaml:"retry"`
 	Database         Database      `yaml:"database"`
 	Limiter          Limiter       `yaml:"limiter"`
 	UI               UI            `yaml:"ui"`
@@ -65,7 +72,11 @@ func Default() Config {
 		Model:            "",
 		TaskTimeout:      30 * time.Minute,
 		AutoCommit:       false,
-		MaxRetries:       1,
+		MaxRetries:       3,
+		Retry: Retry{
+			BackoffInitial: 30 * time.Second,
+			BackoffMax:     10 * time.Minute,
+		},
 		Database: Database{
 			Driver: DriverSQLite,
 			DSN:    ".pave/state.db",
@@ -130,6 +141,12 @@ func (c *Config) applyDefaults() {
 	}
 	if c.Database.DSN == "" {
 		c.Database.DSN = d.Database.DSN
+	}
+	if c.Retry.BackoffInitial == 0 {
+		c.Retry.BackoffInitial = d.Retry.BackoffInitial
+	}
+	if c.Retry.BackoffMax == 0 {
+		c.Retry.BackoffMax = d.Retry.BackoffMax
 	}
 	if c.Limiter.Window == 0 {
 		c.Limiter.Window = d.Limiter.Window
@@ -218,6 +235,10 @@ func (c *Config) Validate() error {
 	case "", "low", "medium", "high", "xhigh", "max":
 	default:
 		return fmt.Errorf("effort must be low, medium, high, xhigh, max, or empty; got %q", c.Effort)
+	}
+	if c.Retry.BackoffInitial > c.Retry.BackoffMax {
+		return fmt.Errorf("retry.backoff_initial (%s) must not exceed backoff_max (%s)",
+			c.Retry.BackoffInitial, c.Retry.BackoffMax)
 	}
 	if c.Limiter.BackoffInitial > c.Limiter.BackoffMax {
 		return fmt.Errorf("limiter.backoff_initial (%s) must not exceed backoff_max (%s)",

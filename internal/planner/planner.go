@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"os"
 	"time"
 
@@ -179,6 +180,13 @@ func (e *Engine) runFeature(ctx context.Context, run state.Run, f *state.Feature
 		}
 		e.notifyRetry(f.ID, attempt+1)
 		e.log(ctx, run, "", slog.LevelWarn, "retrying feature", "feature", f.ID, "attempt", attempt+1)
+
+		delay := retryBackoff(e.Cfg.Retry.BackoffInitial, e.Cfg.Retry.BackoffMax, failures)
+		select {
+		case <-time.After(delay):
+		case <-ctx.Done():
+			return result, attemptQuit, nil
+		}
 	}
 	return result, ares, nil
 }
@@ -396,6 +404,18 @@ func (e *Engine) logger() *slog.Logger {
 		return e.Log
 	}
 	return slog.Default()
+}
+
+// retryBackoff returns initial * 2^(attempt-1), capped at max.
+func retryBackoff(initial, max time.Duration, attempt int) time.Duration {
+	if attempt < 1 {
+		attempt = 1
+	}
+	d := time.Duration(float64(initial) * math.Pow(2, float64(attempt-1)))
+	if d > max || d <= 0 {
+		return max
+	}
+	return d
 }
 
 func implementedSet(features []state.FeatureRow) map[string]bool {
