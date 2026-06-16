@@ -18,7 +18,11 @@ model: ""                        # provider-specific model; empty = provider def
 effort: ""                       # effort level (claude only): low | medium | high | xhigh | max; empty = provider default
 task_timeout: 30m                # per-feature subprocess timeout
 auto_commit: false               # require explicit opt-in before committing
-max_retries: 1                   # retries per feature on failure
+max_retries: 3                   # retries per feature on non-limit failure (0 = no retry)
+
+retry:
+  backoff_initial: 30s           # first delay between non-limit retries (exponential)
+  backoff_max: 10m               # cap on retry delay
 
 database:
   driver: sqlite                 # sqlite | postgres | turso

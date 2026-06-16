@@ -39,8 +39,8 @@ func TestLoadAppliesDefaults(t *testing.T) {
 	if !filepath.IsAbs(cfg.Database.DSN) || !strings.HasSuffix(cfg.Database.DSN, filepath.Join(".pave", "state.db")) {
 		t.Errorf("DSN = %q, want absolute path ending in .pave/state.db", cfg.Database.DSN)
 	}
-	if cfg.MaxRetries != 1 {
-		t.Errorf("MaxRetries = %d, want 1", cfg.MaxRetries)
+	if cfg.MaxRetries != 3 {
+		t.Errorf("MaxRetries = %d, want 3", cfg.MaxRetries)
 	}
 }
 
@@ -103,8 +103,8 @@ func TestLoadDefaultsRetriesWhenOmitted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
-	if cfg.MaxRetries != 1 {
-		t.Errorf("MaxRetries = %d, want default 1", cfg.MaxRetries)
+	if cfg.MaxRetries != 3 {
+		t.Errorf("MaxRetries = %d, want default 3", cfg.MaxRetries)
 	}
 }
 
