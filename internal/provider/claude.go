@@ -45,6 +45,9 @@ func (c *Claude) buildArgs(t Task) []string {
 	if t.Model != "" {
 		args = append(args, "--model", t.Model)
 	}
+	if t.Effort != "" {
+		args = append(args, "--effort", t.Effort)
+	}
 	return args
 }
 

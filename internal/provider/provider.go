@@ -24,6 +24,7 @@ type Task struct {
 	ProjectPath string
 	Context     string // additional prompt context
 	Model       string // provider-specific model; empty = provider default
+	Effort      string // effort level (claude: low|medium|high|xhigh|max); empty = provider default
 
 	// OnStart, if set, is called once the underlying subprocess has started,
 	// handing back controls so the caller can pause/resume/stop it.

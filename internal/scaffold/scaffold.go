@@ -15,6 +15,7 @@ features_file: ./FEATURES.md    # feature spec (kept in project root for visibil
 provider: claude                 # claude | copilot
 fallback_provider: ""            # optional secondary provider; empty = none
 model: ""                        # provider-specific model; empty = provider default
+effort: ""                       # effort level (claude only): low | medium | high | xhigh | max; empty = provider default
 task_timeout: 30m                # per-feature subprocess timeout
 auto_commit: false               # require explicit opt-in before committing
 max_retries: 1                   # retries per feature on failure

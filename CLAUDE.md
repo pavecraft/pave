@@ -56,6 +56,15 @@ modifying `pave`.
 - Migrations are **additive-only** — never drop or rename columns/tables.
 - Migration SQL lives under `internal/state/migrations/{sqlite,postgres,turso}/`.
 
+## Config rules
+
+- **`internal/config/config.go` is the source of truth for `pave.yaml` fields.**
+- Whenever you add, rename, or remove a field in `Config`, you **must** also update
+  `DefaultConfigYAML` in `internal/scaffold/scaffold.go` so that `pave init` scaffolds
+  the new field with a comment explaining its purpose and accepted values.
+- Every new `Config` field needs a default in `Default()` and, if a blank value is
+  invalid, a guard in `applyDefaults()` and a check in `Validate()`.
+
 ## Subprocess rules
 
 - Set the working directory explicitly on every subprocess.

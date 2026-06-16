@@ -105,6 +105,8 @@ func runRun(cmd *cobra.Command, configPath string, opts runOptions) error {
 		}
 	}
 
+	printProviderSummary(cmd, cfg)
+
 	if opts.dryRun {
 		printPlan(cmd, rows)
 		return finishRun(ctx, st, run, state.RunCompleted)
@@ -130,7 +132,6 @@ func runRun(cmd *cobra.Command, configPath string, opts runOptions) error {
 	out := cmd.OutOrStdout()
 	isATTY := term.IsTerminal(int(os.Stdout.Fd()))
 
-	// Print the interactive hint above the feature list.
 	fmt.Fprintln(out, interactive.Hint)
 	fmt.Fprintln(out)
 
@@ -196,6 +197,19 @@ func selectFeatures(rows []state.FeatureRow, opts runOptions) []state.FeatureRow
 		return pending
 	}
 	return rows
+}
+
+func printProviderSummary(cmd *cobra.Command, cfg config.Config) {
+	out := cmd.OutOrStdout()
+	model := cfg.Model
+	if model == "" {
+		model = "default"
+	}
+	effort := cfg.Effort
+	if effort == "" {
+		effort = "default"
+	}
+	fmt.Fprintf(out, "provider: %s · model: %s · effort: %s\n\n", cfg.Provider, model, effort)
 }
 
 func printPlan(cmd *cobra.Command, rows []state.FeatureRow) {

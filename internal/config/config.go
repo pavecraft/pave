@@ -46,6 +46,7 @@ type Config struct {
 	Provider         string        `yaml:"provider"`
 	FallbackProvider string        `yaml:"fallback_provider"`
 	Model            string        `yaml:"model"`
+	Effort           string        `yaml:"effort"`
 	TaskTimeout      time.Duration `yaml:"task_timeout"`
 	AutoCommit       bool          `yaml:"auto_commit"`
 	MaxRetries       int           `yaml:"max_retries"`
@@ -212,6 +213,11 @@ func (c *Config) Validate() error {
 	}
 	if c.MaxRetries < 0 {
 		return fmt.Errorf("max_retries must not be negative, got %d", c.MaxRetries)
+	}
+	switch c.Effort {
+	case "", "low", "medium", "high", "xhigh", "max":
+	default:
+		return fmt.Errorf("effort must be low, medium, high, xhigh, max, or empty; got %q", c.Effort)
 	}
 	if c.Limiter.BackoffInitial > c.Limiter.BackoffMax {
 		return fmt.Errorf("limiter.backoff_initial (%s) must not exceed backoff_max (%s)",

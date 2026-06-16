@@ -174,7 +174,8 @@ project_path: .                  # target project root
 features_file: ./FEATURES.md     # feature spec location
 provider: claude                 # claude | copilot
 fallback_provider: ""            # optional secondary provider; empty = none
-model: ""                        # provider-specific model; empty = default
+model: ""                        # provider-specific model; empty = provider default
+effort: ""                       # effort level (claude only): low | medium | high | xhigh | max; empty = provider default
 task_timeout: 30m                # per-feature subprocess timeout
 auto_commit: false               # require explicit opt-in before committing
 max_retries: 1                   # retries per feature on failure (0 = no retry)
@@ -255,6 +256,24 @@ CGO_ENABLED=0 go build ./cmd/pave
 3. **Every exported function needs a test.** Logic packages use table-driven
    tests; concurrency-safe tests use `t.Parallel()`.
 4. Run the full check above before opening a PR.
+
+### Claude models
+
+Set `model` in `pave.yaml` to request a specific Claude model. When empty, the
+`claude` CLI uses its own default. The available models change over time — see the
+[Claude models reference](https://docs.anthropic.com/en/docs/about-claude/models)
+for the current list.
+
+Common choices as of mid-2025:
+
+| Model ID | Notes |
+|---|---|
+| `claude-opus-4-5` | Most capable; slowest / highest cost |
+| `claude-sonnet-4-5` | Balanced (CLI default) |
+| `claude-haiku-4-5` | Fastest / lowest cost |
+
+Set `effort` to control extended thinking budget (empty = provider default):
+`low` · `medium` · `high` · `xhigh` · `max`
 
 ### Adding a provider
 
