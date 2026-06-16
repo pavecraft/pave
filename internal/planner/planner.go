@@ -328,6 +328,7 @@ func (e *Engine) taskFor(f state.FeatureRow, onStart func(provider.Controls)) pr
 		},
 		ProjectPath: e.Cfg.ProjectPath,
 		Model:       e.Cfg.Model,
+		Effort:      e.Cfg.Effort,
 		OnStart:     onStart,
 	}
 }
