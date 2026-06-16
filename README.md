@@ -221,6 +221,8 @@ The UI is embedded directly in the `pave` binary — no Node.js, no download,
 no `npm install`. It connects to the same database configured in `pave.yaml`
 and shows live run data.
 
+![pave UI — live run dashboard](https://github.com/user-attachments/assets/362bf0e4-3b79-4536-b970-89b29c7bbbe5)
+
 ### `pave ui` flags
 
 | Flag | Description |
