@@ -39,6 +39,7 @@ func newRootCmd() *cobra.Command {
 		newRunCmd(),
 		newLimitsCmd(),
 		newUICmd(),
+		newUpdateCmd(),
 	)
 	return root
 }
