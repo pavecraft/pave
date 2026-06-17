@@ -148,6 +148,7 @@ included verbatim in the prompt sent to the AI provider.
 | `pave run [flags]` | Implement pending features. |
 | `pave limits` | Report rate-limit status and next reset time. |
 | `pave ui` | Launch the local web UI (embedded in the binary). |
+| `pave update` | Update pave to the latest released version. |
 
 ### `pave run` flags
 
