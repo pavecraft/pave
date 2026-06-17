@@ -1,28 +1,45 @@
 # pave
 
+[![Go](https://img.shields.io/badge/go-1.22+-00ADD8?logo=go)](https://go.dev)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/pavecraft/pave)](https://github.com/pavecraft/pave/releases/latest)
+
 > An autonomous, local-first development orchestrator that reads a project's
 > feature spec, tracks implementation state, and drives an AI coding CLI
 > (Claude Code or GitHub Copilot) to implement pending features — pausing and
 > resuming gracefully around provider rate limits.
 
-`pave` is the orchestration layer on top of an AI coding CLI. The CLIs are great
-at implementing a feature when you ask, but they don't track *which* planned
-features are done, they don't pause when you hit a usage limit, and they can't
-fall back to another provider. `pave` fills that gap. It manages the coding CLI
-as a subprocess — it does **not** reimplement an agent loop.
+## Why pave?
 
-See [CLAUDE.md](CLAUDE.md) for the rules every contributor (human or agent) follows.
+Running `claude` or `copilot` manually works well for one feature at a time — but
+it doesn't scale to a full backlog. You have to remember what's done, re-prompt on
+every restart, and babysit it through rate limits. `pave` removes all of that: you
+write a feature list, run `pave run`, and walk away. It implements features in order,
+persists state across sessions, backs off on limits, and picks up exactly where it
+left off after a crash or restart.
+
+`pave` is the orchestration layer on top of an AI coding CLI. It manages the CLI as
+a subprocess — it does **not** reimplement an agent loop.
 
 ## Features
 
 - **Feature tracking** across sessions, persisted in a database.
 - **Autonomous loop** that implements pending features in dependency/priority order.
 - **Rate-limit aware**: detects usage limits, backs off with jitter, resumes on reset.
+- **Resilient retries**: exponential backoff on transient failures (network errors, etc.).
 - **Interactive control**: pause, resume, terminate a task, or quit — live, mid-run.
 - **Crash-safe & resumable**: a `kill -9` never re-implements completed features.
-- **Provider-agnostic**: Claude today, Copilot included, easy to add more.
+- **Provider-agnostic**: Claude Code today, GitHub Copilot included, easy to add more.
 - **Provider fallback**: switch to a secondary provider when the primary is limited.
 - **Pluggable storage**: SQLite (default), PostgreSQL, or Turso (libSQL, cloud).
+- **Built-in web UI**: inspect runs, attempts, prompts, and output in a local dashboard.
+
+## Prerequisites
+
+Install at least one AI coding CLI and make sure it is on your `PATH`:
+
+- **[Claude Code](https://claude.com/claude-code)** — `claude` (recommended)
+- **[GitHub Copilot CLI](https://githubnext.com/projects/copilot-cli)** — `gh copilot`
 
 ## Installation
 
@@ -32,14 +49,17 @@ See [CLAUDE.md](CLAUDE.md) for the rules every contributor (human or agent) foll
 curl -fsSL https://raw.githubusercontent.com/pavecraft/pave/main/install.sh | bash
 ```
 
-This downloads the latest release binary to `~/.local/bin/pave`. No Go required.
-
-To install a specific version or to a custom directory:
+Downloads the latest release binary to `~/.local/bin/pave`. No Go required.
 
 ```sh
-PAVE_VERSION=v1.2.3 curl -fsSL https://raw.githubusercontent.com/pavecraft/pave/main/install.sh | bash
+# Install a specific version
+PAVE_VERSION=v0.1.0 curl -fsSL https://raw.githubusercontent.com/pavecraft/pave/main/install.sh | bash
+
+# Install to a custom directory
 PAVE_INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/pavecraft/pave/main/install.sh | bash
 ```
+
+See [Releases](https://github.com/pavecraft/pave/releases) for all available versions.
 
 ### From source (Go 1.22+)
 
@@ -47,17 +67,11 @@ PAVE_INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/pav
 go install github.com/pavecraft/pave/cmd/pave@latest
 ```
 
-Or build locally (single static binary, no CGO):
+Or build a single static binary (no CGO):
 
 ```sh
 CGO_ENABLED=0 go build -o pave ./cmd/pave
 ```
-
-`pave` drives an external coding CLI. Install at least one and make sure it is on
-your `PATH`:
-
-- [Claude Code](https://claude.com/claude-code) — `claude`
-- GitHub Copilot CLI — `copilot`
 
 ## Quick start
 
@@ -66,8 +80,8 @@ cd your-project
 pave init               # scaffold .pave/pave.yaml + FEATURES.md
 $EDITOR FEATURES.md     # list the features you want
 pave status             # see what's pending
-pave run                # implement pending features (asks for confirmation)
-pave run -y             # skip confirmation
+pave run --dry-run      # preview which features will be implemented
+pave run -y             # implement them
 ```
 
 A `FEATURES.md` entry looks like:
@@ -79,25 +93,25 @@ A `FEATURES.md` entry looks like:
 ```
 
 - `- [ ]` is pending, `- [x]` is already implemented.
-- Text after an em dash (`—`) or colon is the description.
+- Text after an em dash (`—`) is the description; passed verbatim to the AI.
 - A trailing `(priority: N, depends: id1, id2)` block carries metadata.
 - The feature ID is the slug of the title (e.g. `add-user-login`).
 
 ## Workflow
 
-### New project (no existing code)
+### New project
 
 ```sh
 pave init               # scaffold .pave/pave.yaml + FEATURES.md
-$EDITOR FEATURES.md     # list the features you want pave to implement
+$EDITOR FEATURES.md     # describe what you want built
 pave run                # implement pending features
 ```
 
-### Existing project (some features already in codebase)
+### Existing project
 
-If your project already has code that satisfies some of the features, you have two options:
+If your project already has code satisfying some features, you have two options:
 
-**Option A — mark them manually** in FEATURES.md:
+**Option A — mark them done manually** in `FEATURES.md`:
 ```markdown
 - [x] Project scaffolding   # already done — pave skips [x] items
 - [ ] Add user login
@@ -105,18 +119,16 @@ If your project already has code that satisfies some of the features, you have t
 
 **Option B — let pave detect them automatically:**
 ```sh
-pave status --scan      # walks the codebase; marks features it finds as implemented
+pave status --scan      # walks the codebase; marks implemented features
 pave run                # implements only what's still pending
 ```
 
-Run `pave status --scan` before your first `pave run` when the codebase already has
-partial or complete implementations. After the first run, state is persisted in the
-database and subsequent `pave run` invocations pick up where they left off automatically.
+Run `pave status --scan` before the first `pave run` on an existing project. After
+that, state is persisted and subsequent runs pick up exactly where they left off.
 
-### Feature descriptions
+### Writing good feature descriptions
 
-Each feature is a task-list entry in FEATURES.md. Descriptions can be as long as needed —
-write the full context an AI provider needs to implement the feature correctly:
+Descriptions can be as long as needed — write the full context the AI needs:
 
 ```markdown
 - [ ] Add user login — email + password auth with bcrypt hashing, JWT session tokens
@@ -124,24 +136,24 @@ write the full context an AI provider needs to implement the feature correctly:
   (priority: 1)
 ```
 
-The title (before `—`) becomes the feature ID slug used in state tracking. The description
-(after `—`) is included verbatim in the prompt sent to the AI provider.
+The title (before `—`) becomes the feature ID. The description (after `—`) is
+included verbatim in the prompt sent to the AI provider.
 
 ## Commands
 
 | Command | Description |
 |---|---|
 | `pave init` | Scaffold `.pave/pave.yaml` and `FEATURES.md`; creates the database. Never overwrites existing files. |
-| `pave status [--scan]` | Show implemented vs. pending. `--scan` walks the codebase to auto-detect already-implemented features — run this before the first `pave run` on an existing project. |
-| `pave run [flags]` | Implement pending features (interactive). |
-| `pave limits` | Report rate-limit status and next reset. |
+| `pave status [--scan]` | Show implemented vs. pending. `--scan` auto-detects already-implemented features from the codebase. |
+| `pave run [flags]` | Implement pending features. |
+| `pave limits` | Report rate-limit status and next reset time. |
 | `pave ui` | Launch the local web UI (embedded in the binary). |
 
 ### `pave run` flags
 
 | Flag | Description |
 |---|---|
-| `--feature <id>` | Implement only this feature. |
+| `--feature <id>` | Implement only this one feature. |
 | `--dry-run` | Print the plan without invoking the provider. |
 | `--max-features <N>` | Stop after N features. |
 | `-y, --yes` | Skip the confirmation prompt. |
@@ -155,8 +167,7 @@ The title (before `—`) becomes the feature ID slug used in state tracking. The
 
 ## Interactive controls (during `pave run`)
 
-While a run is in progress you can steer it from the keyboard without killing
-the process:
+While a run is in progress you can steer it from the keyboard:
 
 | Key | Action |
 |---|---|
@@ -175,27 +186,48 @@ features_file: ./FEATURES.md     # feature spec location
 provider: claude                 # claude | copilot
 fallback_provider: ""            # optional secondary provider; empty = none
 model: ""                        # provider-specific model; empty = provider default
-effort: ""                       # effort level (claude only): low | medium | high | xhigh | max; empty = provider default
+effort: ""                       # effort level (claude only): low | medium | high | xhigh | max
 task_timeout: 30m                # per-feature subprocess timeout
 auto_commit: false               # require explicit opt-in before committing
 max_retries: 3                   # retries per feature on non-limit failure (0 = no retry)
 
+# Backoff between non-limit failure retries (network errors, exit 1, etc.)
+# Delays: 30s → 60s → 120s … capped at backoff_max.
 retry:
-  backoff_initial: 30s           # first delay between non-limit retries (exponential)
-  backoff_max: 10m               # cap on retry delay
+  backoff_initial: 30s
+  backoff_max: 10m
 
 database:
   driver: sqlite                 # sqlite | postgres | turso
-  dsn: ".pave/state.db"          # file path (sqlite) or connection URL
+  dsn: ".pave/state.db"         # file path (sqlite) or connection URL
 
+# Backoff when a provider usage limit is detected.
+# Much longer scale than retry — limits typically reset after hours.
 limiter:
   window: 5h                     # rolling usage window length
   backoff_initial: 1m            # first backoff interval
   backoff_max: 5h                # cap on backoff
 
 ui:
-  port: 4000                     # port for the local viewer (default)
+  port: 4000                     # port for the local web viewer
 ```
+
+### Claude models
+
+Set `model` to request a specific Claude model. When empty, the `claude` CLI uses
+its own default. Available models change over time — see the
+[Claude models reference](https://docs.anthropic.com/en/docs/about-claude/models).
+
+Common choices as of mid-2025:
+
+| Model ID | Notes |
+|---|---|
+| `claude-opus-4-5` | Most capable; slowest / highest cost |
+| `claude-sonnet-4-5` | Balanced (CLI default) |
+| `claude-haiku-4-5` | Fastest / lowest cost |
+
+Set `effort` to control Claude's extended thinking budget:
+`low` · `medium` · `high` · `xhigh` · `max` (empty = provider default)
 
 ### Database drivers
 
@@ -205,21 +237,20 @@ ui:
 | `postgres` | `postgres://user:pass@host:5432/db?sslmode=disable` | Uses `pgx`. |
 | `turso` | `libsql://your-db.turso.io` | Set `TURSO_AUTH_TOKEN` in the env. |
 
-The driver and DSN can be overridden with the `PAVE_DRIVER` and `PAVE_DSN`
-environment variables.
+Override driver and DSN with the `PAVE_DRIVER` and `PAVE_DSN` environment variables.
 
 ## UI
 
-pave ships a built-in web viewer you can start with:
+pave ships a built-in web viewer:
 
 ```sh
 pave ui            # opens http://localhost:4000
 pave ui -P 8080    # custom port
 ```
 
-The UI is embedded directly in the `pave` binary — no Node.js, no download,
-no `npm install`. It connects to the same database configured in `pave.yaml`
-and shows live run data.
+No Node.js, no download, no `npm install` — the UI is embedded directly in the
+`pave` binary. It connects to the same database configured in `pave.yaml` and shows
+live run data: features, attempts, prompts, output, and log streams.
 
 ![pave UI — live run dashboard](https://github.com/user-attachments/assets/362bf0e4-3b79-4536-b970-89b29c7bbbe5)
 
@@ -237,13 +268,13 @@ load config → verify provider → parse FEATURES.md
   → for each pending feature (deps & priority respected):
        wait for limiter clearance
        run provider as a subprocess (capturing prompt, output, timing)
+       on failure: retry with exponential backoff up to max_retries
        record the attempt; mark implemented / failed / pending
-  → on limit: back off and resume; on signal/quit: persist and exit cleanly
+  → on rate limit: back off and resume; on signal/quit: persist and exit cleanly
 ```
 
-Every run, feature, attempt (including the full prompt and output), log line,
-and limiter window is recorded in the database, so the state is fully
-inspectable — and replayable by the local viewer.
+Every run, feature, attempt (including the full prompt and output), log line, and
+limiter window is recorded in the database — fully inspectable via the local UI.
 
 ## Building & testing
 
@@ -258,28 +289,10 @@ CGO_ENABLED=0 go build ./cmd/pave
 
 1. Read [CLAUDE.md](CLAUDE.md) — it defines the hard rules (no CGO, subprocess
    discipline, error wrapping, dependency direction).
-2. Branch from `main`; keep commits small and scoped to one feature ID.
+2. Branch from `main`; keep commits small and scoped to one concern.
 3. **Every exported function needs a test.** Logic packages use table-driven
    tests; concurrency-safe tests use `t.Parallel()`.
 4. Run the full check above before opening a PR.
-
-### Claude models
-
-Set `model` in `pave.yaml` to request a specific Claude model. When empty, the
-`claude` CLI uses its own default. The available models change over time — see the
-[Claude models reference](https://docs.anthropic.com/en/docs/about-claude/models)
-for the current list.
-
-Common choices as of mid-2025:
-
-| Model ID | Notes |
-|---|---|
-| `claude-opus-4-5` | Most capable; slowest / highest cost |
-| `claude-sonnet-4-5` | Balanced (CLI default) |
-| `claude-haiku-4-5` | Fastest / lowest cost |
-
-Set `effort` to control extended thinking budget (empty = provider default):
-`low` · `medium` · `high` · `xhigh` · `max`
 
 ### Adding a provider
 
@@ -292,3 +305,7 @@ Implement the `provider.Provider` interface (`Name`, `Run`, `CheckLimit`,
 Implement the `state.Store` interface in `internal/state`, add migrations under
 `internal/state/migrations/<driver>/`, and wire it into `state.New`. Migrations
 are additive-only.
+
+## License
+
+[MIT](LICENSE) © pavecraft
