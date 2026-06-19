@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/pavecraft/pave/internal/state"
+	"github.com/paveforge/pave/internal/state"
 )
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/pavecraft/pave/internal/proc"
+	"github.com/paveforge/pave/internal/proc"
 )
 
 // Copilot drives the GitHub `copilot` CLI in headless print mode (`copilot -p`).

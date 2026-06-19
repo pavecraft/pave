@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/pavecraft/pave/internal/proc"
+	"github.com/paveforge/pave/internal/proc"
 )
 
 // Claude drives the `claude` CLI in headless print mode (`claude -p`).

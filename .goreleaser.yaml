@@ -37,7 +37,7 @@ checksum:
 
 release:
   github:
-    owner: pavecraft
+    owner: paveforge
     name: pave
   prerelease: auto
 

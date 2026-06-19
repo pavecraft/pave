@@ -13,9 +13,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pavecraft/pave/internal/config"
-	"github.com/pavecraft/pave/internal/provider"
-	"github.com/pavecraft/pave/internal/state"
+	"github.com/paveforge/pave/internal/config"
+	"github.com/paveforge/pave/internal/provider"
+	"github.com/paveforge/pave/internal/state"
 )
 
 // Limiter implements planner.Limiter.

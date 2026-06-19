@@ -2,7 +2,7 @@
 
 [![Go](https://img.shields.io/badge/go-1.22+-00ADD8?logo=go)](https://go.dev)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/pavecraft/pave)](https://github.com/pavecraft/pave/releases/latest)
+[![Release](https://img.shields.io/github/v/release/paveforge/pave)](https://github.com/paveforge/pave/releases/latest)
 
 > An autonomous, local-first development orchestrator that reads a project's
 > feature spec, tracks implementation state, and drives an AI coding CLI
@@ -46,25 +46,25 @@ Install at least one AI coding CLI and make sure it is on your `PATH`:
 ### Quick install (Linux & macOS)
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/pavecraft/pave/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/paveforge/pave/main/install.sh | bash
 ```
 
 Downloads the latest release binary to `~/.local/bin/pave`. No Go required.
 
 ```sh
 # Install a specific version
-PAVE_VERSION=v0.1.0 curl -fsSL https://raw.githubusercontent.com/pavecraft/pave/main/install.sh | bash
+PAVE_VERSION=v0.1.0 curl -fsSL https://raw.githubusercontent.com/paveforge/pave/main/install.sh | bash
 
 # Install to a custom directory
-PAVE_INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/pavecraft/pave/main/install.sh | bash
+PAVE_INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/paveforge/pave/main/install.sh | bash
 ```
 
-See [Releases](https://github.com/pavecraft/pave/releases) for all available versions.
+See [Releases](https://github.com/paveforge/pave/releases) for all available versions.
 
 ### From source (Go 1.22+)
 
 ```sh
-go install github.com/pavecraft/pave/cmd/pave@latest
+go install github.com/paveforge/pave/cmd/pave@latest
 ```
 
 Or build a single static binary (no CGO):
@@ -309,4 +309,4 @@ are additive-only.
 
 ## License
 
-[MIT](LICENSE) © pavecraft
+[MIT](LICENSE) © paveforge

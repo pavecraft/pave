@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pavecraft/pave/internal/config"
+	"github.com/paveforge/pave/internal/config"
 )
 
 // New opens a Store for the configured database driver, running migrations as

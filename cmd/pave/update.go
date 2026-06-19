@@ -13,7 +13,7 @@ func newUpdateCmd() *cobra.Command {
 		Short: "Update pave to the latest version",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c := exec.Command("bash", "-c",
-				"curl -fsSL https://raw.githubusercontent.com/pavecraft/pave/main/install.sh | bash")
+				"curl -fsSL https://raw.githubusercontent.com/paveforge/pave/main/install.sh | bash")
 			c.Stdout = os.Stdout
 			c.Stderr = os.Stderr
 			return c.Run()

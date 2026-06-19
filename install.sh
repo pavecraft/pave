@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="pavecraft/pave"
+REPO="paveforge/pave"
 INSTALL_DIR="${PAVE_INSTALL_DIR:-$HOME/.local/bin}"
 VERSION="${PAVE_VERSION:-}"
 

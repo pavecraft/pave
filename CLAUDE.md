@@ -5,7 +5,7 @@ modifying `pave`.
 
 ## Project basics
 
-- **Module:** `github.com/pavecraft/pave`
+- **Module:** `github.com/paveforge/pave`
 - **Language:** Go 1.22+
 - **Build:** `cd ui && npm ci && npm run build && cd .. && CGO_ENABLED=0 go build ./cmd/pave`
   (The React/Vite UI must be built first so `//go:embed all:dist` has files to embed.)
