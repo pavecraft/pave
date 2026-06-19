@@ -6,7 +6,7 @@ import (
 	"io/fs"
 	"net/http"
 
-	"github.com/pavecraft/pave/internal/state"
+	"github.com/paveforge/pave/internal/state"
 )
 
 // Server wires API routes and static file serving onto a single http.Handler.

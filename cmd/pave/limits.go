@@ -8,8 +8,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/pavecraft/pave/internal/config"
-	"github.com/pavecraft/pave/internal/state"
+	"github.com/paveforge/pave/internal/config"
+	"github.com/paveforge/pave/internal/state"
 )
 
 func newLimitsCmd() *cobra.Command {

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/pavecraft/pave/internal/project"
+	"github.com/paveforge/pave/internal/project"
 )
 
 func writeFile(t *testing.T, dir, rel, content string) {

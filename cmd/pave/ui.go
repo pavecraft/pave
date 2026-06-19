@@ -13,11 +13,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/pavecraft/pave/internal/api"
-	"github.com/pavecraft/pave/internal/config"
-	"github.com/pavecraft/pave/internal/proc"
-	"github.com/pavecraft/pave/internal/state"
-	"github.com/pavecraft/pave/internal/uistatic"
+	"github.com/paveforge/pave/internal/api"
+	"github.com/paveforge/pave/internal/config"
+	"github.com/paveforge/pave/internal/proc"
+	"github.com/paveforge/pave/internal/state"
+	"github.com/paveforge/pave/internal/uistatic"
 )
 
 func newUICmd() *cobra.Command {

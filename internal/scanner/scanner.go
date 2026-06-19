@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pavecraft/pave/internal/project"
+	"github.com/paveforge/pave/internal/project"
 )
 
 // skipDirs are directory names never descended into.

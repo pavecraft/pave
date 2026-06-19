@@ -7,7 +7,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/pavecraft/pave/internal/project"
+	"github.com/paveforge/pave/internal/project"
 )
 
 // Controls is the subset of subprocess lifecycle operations the planner uses to

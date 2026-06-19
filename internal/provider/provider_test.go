@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/pavecraft/pave/internal/project"
+	"github.com/paveforge/pave/internal/project"
 )
 
 // compile-time check that Claude satisfies the interface.

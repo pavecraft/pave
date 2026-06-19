@@ -1,4 +1,4 @@
-module github.com/pavecraft/pave
+module github.com/paveforge/pave
 
 go 1.26.4
 

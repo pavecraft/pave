@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/pavecraft/pave/internal/state"
+	"github.com/paveforge/pave/internal/state"
 )
 
 // streamLogs streams new log lines for a run as Server-Sent Events. It polls

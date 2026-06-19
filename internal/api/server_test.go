@@ -11,7 +11,7 @@ import (
 	"testing/fstest"
 	"time"
 
-	"github.com/pavecraft/pave/internal/state"
+	"github.com/paveforge/pave/internal/state"
 )
 
 // mockStore implements state.Store for testing.

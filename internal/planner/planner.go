@@ -14,11 +14,11 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/pavecraft/pave/internal/config"
-	"github.com/pavecraft/pave/internal/interactive"
-	"github.com/pavecraft/pave/internal/project"
-	"github.com/pavecraft/pave/internal/provider"
-	"github.com/pavecraft/pave/internal/state"
+	"github.com/paveforge/pave/internal/config"
+	"github.com/paveforge/pave/internal/interactive"
+	"github.com/paveforge/pave/internal/project"
+	"github.com/paveforge/pave/internal/provider"
+	"github.com/paveforge/pave/internal/state"
 )
 
 // Limiter gates provider usage around rate limits. The planner depends only on
